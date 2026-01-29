@@ -7,36 +7,39 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import { useVirtualizer } from '@tanstack/react-virtual';
 
-import { 
-  Home, 
-  Heart, 
-  EyeOff, 
-  MapPin, 
-  Bed, 
-  Bath, 
-  Car, 
-  Trees, 
-  Shield, 
-  ExternalLink, 
-  Settings, 
-  LogOut, 
-  Loader2, 
-  ChevronDown, 
-  SlidersHorizontal 
+import {
+  Home,
+  Heart,
+  EyeOff,
+  MapPin,
+  Bed,
+  Bath,
+  Car,
+  Trees,
+  Shield,
+  ExternalLink,
+  Settings,
+  LogOut,
+  Loader2,
+  ChevronDown,
+  SlidersHorizontal
 } from 'lucide-react';
 
 import { api, PropertyMatch, User, PaginatedResponse } from '@/lib/api';
 
 // SWR fetcher functions
 const fetchUser = (): Promise<User | null> => api.me().catch(() => null);
-const fetchMatches = ({ sortBy, sortOrder }: { sortBy: string; sortOrder: string }): Promise<PaginatedResponse<PropertyMatch>> => {
+const fetchNeighborhoods = (cityId: string | null) => cityId ? api.getNeighborhoods(cityId) : Promise.resolve([]);
+
+const fetchMatches = ({ sortBy, sortOrder, neighborhoodId }: { sortBy: string; sortOrder: string; neighborhoodId: string | null }): Promise<PaginatedResponse<PropertyMatch>> => {
   const token = api.getToken();
-  const params = { 
-    limit: 50, 
-    sortBy: sortBy as 'score' | 'price' | 'date', 
-    sortOrder: sortOrder as 'asc' | 'desc' 
+  const params = {
+    limit: 50,
+    sortBy: sortBy as 'score' | 'price' | 'date',
+    sortOrder: sortOrder as 'asc' | 'desc',
+    neighborhoodId: neighborhoodId || undefined
   };
-  
+
   if (token) {
     return api.getMatches(params);
   }
@@ -55,7 +58,7 @@ const priceFormatter = new Intl.NumberFormat('pt-BR', {
 });
 
 // Grid configuration for virtualization
-const CARD_HEIGHT = 520; // Increased to fit new design and avoid vertical overlap
+const CARD_HEIGHT = 600; // Increased to accommodate 2-line titles and prevent overlap
 const GAP = 24; // Gap between cards (gap-6 = 1.5rem = 24px)
 
 export default function DashboardPage() {
@@ -63,6 +66,7 @@ export default function DashboardPage() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState('score');
   const [sortOrder, setSortOrder] = useState('desc');
+  const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState<string | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -76,10 +80,22 @@ export default function DashboardPage() {
     revalidateOnFocus: false,
   });
 
+  // Fetch preferences to get cityId (if user is logged in)
+  const { data: prefs } = useSWR(user ? 'preferences' : null, () => api.getPreferences());
+
+  const guestPrefs = !user ? api.getGuestPreferences() : null;
+  const targetCityId = user ? prefs?.location?.targetCityId : guestPrefs?.location?.targetCityId;
+
+  // SWR for neighborhoods
+  const { data: neighborhoods = [] } = useSWR(
+    targetCityId ? ['neighborhoods', targetCityId] : null,
+    () => fetchNeighborhoods(targetCityId!)
+  );
+
   // SWR for matches with deduplication and caching
   const { data: matchesData, error: matchesError, mutate: mutateMatches } = useSWR(
-    ['matches', sortBy, sortOrder],
-    () => fetchMatches({ sortBy, sortOrder }),
+    ['matches', sortBy, sortOrder, selectedNeighborhoodId],
+    () => fetchMatches({ sortBy, sortOrder, neighborhoodId: selectedNeighborhoodId }),
     { revalidateOnFocus: false }
   );
 
@@ -245,9 +261,9 @@ export default function DashboardPage() {
                 <ChevronDown className="w-4 h-4 text-nin-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none group-hover:text-nin-500 transition-colors" />
               </div>
             </div>
-            
+
             {/* Preferences Button */}
-            <Link 
+            <Link
               href="/preferences"
               className="btn btn-secondary btn-sm flex items-center gap-2"
               title="Ajustar preferências de busca"
@@ -257,6 +273,35 @@ export default function DashboardPage() {
             </Link>
           </div>
         </div>
+
+        {/* Neighborhood Filter Pills */}
+        {neighborhoods.length > 0 && (
+          <div className="flex-shrink-0 max-w-7xl mx-auto px-6 mb-6 w-full">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+              <button
+                onClick={() => setSelectedNeighborhoodId(null)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedNeighborhoodId === null
+                  ? 'bg-nin-500 text-white shadow-md shadow-nin-500/20'
+                  : 'bg-white text-nin-600 border border-nin-200 hover:border-nin-300'
+                  }`}
+              >
+                Todos
+              </button>
+              {neighborhoods.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => setSelectedNeighborhoodId(n.id)}
+                  className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${selectedNeighborhoodId === n.id
+                    ? 'bg-nin-500 text-white shadow-md shadow-nin-500/20'
+                    : 'bg-white text-nin-600 border border-nin-200 hover:border-nin-300'
+                    }`}
+                >
+                  {n.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {matches.length === 0 && !isLoading ? (
           <div className="max-w-7xl mx-auto px-6 w-full">
@@ -376,12 +421,12 @@ const PropertyCard = memo(function PropertyCard({
 
       {/* Content */}
       <div className="p-5">
-        <div className="flex items-start justify-between gap-3 mb-1">
-          <h3 className="font-heading text-lg font-bold text-nin-900 line-clamp-1 group-hover:text-nin-500 transition-colors">
+        <div className="flex items-start justify-between gap-3 mb-1 min-h-[56px]">
+          <h3 className="font-heading text-lg font-bold text-nin-900 line-clamp-2 group-hover:text-nin-500 transition-colors">
             {property.title}
           </h3>
         </div>
-        
+
         <div className="flex items-center justify-between mb-4">
           <span className="text-xl font-bold text-nin-500">
             {priceFormatter.format(property.price)}
@@ -425,24 +470,40 @@ const PropertyCard = memo(function PropertyCard({
           )}
         </div>
 
-        {/* Score breakdown */}
-        <div className="grid grid-cols-5 gap-1 mb-4">
-          {Object.entries(scoreBreakdown).map(([key, value]) => (
-            <div key={key} className="text-center">
-              <div
-                className="h-full rounded-full transition-all duration-1000 ease-out"
-                style={{
-                  width: `${value}%`,
-                  background: `linear-gradient(to right, currentColor, currentColor)`,
-                  color: value >= 70 ? '#6B9B64' : value >= 40 ? '#D89F6A' : '#B94A48',
-                  opacity: 0.8
-                }}
-              />
-              <span className="text-[10px] text-nin-400 capitalize">
-                {key === 'budget' ? 'Orç' : key === 'space' ? 'Esp' : key === 'location' ? 'Loc' : key === 'lifestyle' ? 'Est' : 'Amen'}
-              </span>
-            </div>
-          ))}
+        <div className="grid grid-cols-5 gap-2 mb-4">
+          {Object.entries(scoreBreakdown).map(([key, value]) => {
+            const labels: Record<string, string> = {
+              budget: 'Orçamento',
+              space: 'Espaço',
+              location: 'Localização',
+              lifestyle: 'Estilo de Vida',
+              amenities: 'Comodidades'
+            };
+            const label = labels[key] || key;
+
+            return (
+              <div key={key} className="flex flex-col gap-1 group/tooltip relative">
+                {/* Tooltip */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-nin-900 text-white text-[10px] rounded opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all whitespace-nowrap z-50 shadow-xl">
+                  {label}: {value}%
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-nin-900" />
+                </div>
+
+                <div className="h-1.5 w-full bg-nin-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full transition-all duration-1000 ease-out"
+                    style={{
+                      width: `${value}%`,
+                      backgroundColor: value >= 70 ? '#6B9B64' : value >= 40 ? '#D89F6A' : '#B94A48',
+                    }}
+                  />
+                </div>
+                <span className="text-[10px] text-nin-400 capitalize text-center">
+                  {key === 'budget' ? 'Orç' : key === 'space' ? 'Esp' : key === 'location' ? 'Loc' : key === 'lifestyle' ? 'Est' : 'Amen'}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Actions */}
@@ -450,9 +511,8 @@ const PropertyCard = memo(function PropertyCard({
           <button
             onClick={() => onSave(property.id)}
             disabled={loading || isFavorite}
-            className={`flex-1 btn ${
-              isFavorite ? 'bg-sage-100 text-sage-600' : 'btn-secondary'
-            }`}
+            className={`flex-1 btn ${isFavorite ? 'bg-sage-100 text-sage-600' : 'btn-secondary'
+              }`}
           >
             <Heart className={`w-4 h-4 mr-1 ${isFavorite ? 'fill-current' : ''}`} />
             {isFavorite ? 'Salvo' : 'Salvar'}

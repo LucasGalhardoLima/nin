@@ -68,9 +68,14 @@ export class MatchingService {
     const allProperties = await this.propertiesService.findAllActive();
     
     // Filter by target city if specified
-    const properties = preferences.targetCityId
+    let properties = preferences.targetCityId
       ? allProperties.filter(p => p.cityId === preferences.targetCityId)
       : allProperties;
+
+    // Filter by neighborhood if specified in DTO
+    if (dto.neighborhoodId) {
+      properties = properties.filter(p => p.neighborhoodId === dto.neighborhoodId);
+    }
 
     // Get POIs for lifestyle scoring
     const pois = await this.prisma.pointOfInterest.findMany({

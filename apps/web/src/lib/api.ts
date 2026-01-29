@@ -82,6 +82,8 @@ class ApiClient {
     const searchParams = new URLSearchParams();
     if (params?.minScore) searchParams.set('minScore', String(params.minScore));
     if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
+    if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+    if (params?.neighborhoodId) searchParams.set('neighborhoodId', params.neighborhoodId);
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.limit) searchParams.set('limit', String(params.limit));
 
@@ -95,6 +97,8 @@ class ApiClient {
     const searchParams = new URLSearchParams();
     if (params?.minScore) searchParams.set('minScore', String(params.minScore));
     if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
+    if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+    if (params?.neighborhoodId) searchParams.set('neighborhoodId', params.neighborhoodId);
     if (params?.page) searchParams.set('page', String(params.page));
     if (params?.limit) searchParams.set('limit', String(params.limit));
 
@@ -264,6 +268,8 @@ export interface Neighborhood {
 export interface MatchListParams {
   minScore?: number;
   sortBy?: 'score' | 'price' | 'date';
+  sortOrder?: 'asc' | 'desc';
+  neighborhoodId?: string;
   page?: number;
   limit?: number;
 }

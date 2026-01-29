@@ -44,46 +44,55 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 bg-gradient-to-b from-nin-50 to-white relative overflow-hidden">
-        {/* Decorative elements */}
-        <div className="absolute top-20 left-10 w-64 h-64 bg-sage-100 rounded-full opacity-20 blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-honey-100 rounded-full opacity-15 blur-3xl" />
+      <section className="min-h-screen flex items-center pt-20 px-6 bg-gradient-to-br from-nin-50 via-white to-sage-50/30 relative overflow-hidden">
+        {/* Advanced Decorative elements */}
+        <div className="absolute top-[-10%] left-[-5%] w-[40%] h-[40%] bg-nin-200/20 rounded-full blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[5%] right-[-10%] w-[50%] h-[50%] bg-honey-200/10 rounded-full blur-[100px]" />
 
         <motion.div
           initial="hidden"
           animate="visible"
           variants={staggerContainer}
-          className="max-w-7xl mx-auto relative z-10"
+          className="max-w-7xl mx-auto w-full relative z-10"
         >
-          <div className="max-w-3xl mx-auto text-center">
-            <motion.h1
-              variants={fadeInUp}
-              className="font-heading text-5xl md:text-6xl font-bold text-nin-900 mb-6 text-balance"
-            >
-              Encontre seu{' '}
-              <span className="text-nin-500">ninho perfeito</span>
-            </motion.h1>
-            <motion.p
-              variants={fadeInUp}
-              className="text-xl text-nin-700 mb-10 text-balance"
-            >
-              Não procure imóveis. Deixe que eles encontrem você.
-              O Nin. combina suas preferências de vida com propriedades
-              em Matão e Araraquara.
-            </motion.p>
+          <div className="max-w-4xl mx-auto text-center">
             <motion.div
               variants={fadeInUp}
-              className="flex flex-col sm:flex-row gap-4 justify-center"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-nin-100 text-nin-700 text-sm font-medium mb-8"
             >
-            <motion.div whileHover={hoverScale}>
-                <Link href="/onboarding" className="btn btn-primary text-lg px-8 py-4">
-                  Encontrar meu ninho
-                  <ArrowRight className="w-5 h-5 ml-2" />
+              <MapPin className="w-4 h-4" />
+              Exclusivo para Matão e Araraquara
+            </motion.div>
+
+            <motion.h1
+              variants={fadeInUp}
+              className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold text-nin-900 mb-8 tracking-tight leading-[1.1]"
+            >
+              Sua vida em <br />
+              <span className="text-nin-500">perfeito match.</span>
+            </motion.h1>
+
+            <motion.p
+              variants={fadeInUp}
+              className="text-xl md:text-2xl text-nin-700 mb-12 max-w-2xl mx-auto leading-relaxed"
+            >
+              Cansado de ver anúncios que não fazem sentido? <br className="hidden md:block" />
+              O Nin. conecta seu estilo de vida aos melhores imóveis do interior paulista.
+            </motion.p>
+
+            <motion.div
+              variants={fadeInUp}
+              className="flex flex-col sm:flex-row gap-6 justify-center items-center"
+            >
+              <motion.div whileHover={hoverScale}>
+                <Link href="/onboarding" className="btn btn-primary text-xl px-10 py-5 shadow-xl shadow-nin-500/20">
+                  Começar agora
+                  <ArrowRight className="w-6 h-6 ml-2" />
                 </Link>
               </motion.div>
               <motion.div whileHover={hoverScale}>
-                <Link href="#como-funciona" className="btn btn-secondary text-lg px-8 py-4">
-                  Como funciona
+                <Link href="#como-funciona" className="btn btn-secondary text-xl px-10 py-5">
+                  Saiba como
                 </Link>
               </motion.div>
             </motion.div>
@@ -95,7 +104,7 @@ export default function LandingPage() {
       <StatsSection />
 
       {/* Features Section */}
-      <section id="como-funciona" className="py-20 px-6 bg-white">
+      <section id="como-funciona" className="py-24 px-6 bg-white">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -105,25 +114,31 @@ export default function LandingPage() {
         >
           <motion.h2
             variants={fadeInUp}
-            className="font-heading text-4xl font-bold text-center text-nin-900 mb-16"
+            className="font-heading text-4xl font-bold text-center text-nin-900 mb-4"
           >
-            Como o Nin. funciona
+            A inteligência por trás do match
           </motion.h2>
-          <div className="grid md:grid-cols-3 gap-8">
+          <motion.p
+            variants={fadeInUp}
+            className="text-center text-nin-600 mb-16 max-w-2xl mx-auto"
+          >
+            Cruzamos dados de segurança, silêncio e proximidade com infraestrutura em todos os bairros de Matão e Araraquara.
+          </motion.p>
+          <div className="grid md:grid-cols-3 gap-12">
             <FeatureCard
               icon={<Users className="w-8 h-8" />}
-              title="Conte sobre você"
-              description="Tamanho da família, pets, crianças, orçamento. Tudo para entender suas necessidades."
+              title="Perfil de Estilo de Vida"
+              description="Diga se valoriza silêncio no Centro ou proximidade com escolas na Vila Xavier. Nós entendemos."
             />
             <FeatureCard
               icon={<Heart className="w-8 h-8" />}
-              title="Defina seu estilo de vida"
-              description="Prefere tranquilidade? Perto de escolas? Fácil acesso a transporte? Você decide os pesos."
+              title="Algoritmo de Afinidade"
+              description="Nossa IA cruza sua rotina com dados reais dos bairros, entregando um score de compatibilidade de 0 a 100%."
             />
             <FeatureCard
               icon={<MapPin className="w-8 h-8" />}
-              title="Receba matches perfeitos"
-              description="Imóveis ordenados por compatibilidade. Quanto maior o score, mais perfeito para você."
+              title="Curadoria Local"
+              description="Integramos com as maiores imobiliárias da região para garantir que você veja apenas o que importa."
             />
           </div>
         </motion.div>
@@ -177,28 +192,30 @@ export default function LandingPage() {
       <FAQAccordion />
 
       {/* CTA Section */}
-      <section className="py-20 px-6 bg-nin-500">
+      <section className="py-24 px-6 bg-nin-500 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-32 -mt-32" />
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-black/5 rounded-full blur-3xl -ml-48 -mb-48" />
+
         <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: '-100px' }}
           variants={staggerContainer}
-          className="max-w-3xl mx-auto text-center"
+          className="max-w-3xl mx-auto text-center relative z-10"
         >
           <motion.h2
             variants={fadeInUp}
-            className="font-heading text-4xl font-bold text-white mb-6"
+            className="font-heading text-4xl md:text-5xl font-bold text-white mb-8"
           >
-            Pronto para encontrar seu ninho?
+            O próximo capítulo da sua vida começa aqui.
           </motion.h2>
-          <motion.p variants={fadeInUp} className="text-nin-100 text-lg mb-10">
-            Cadastre-se gratuitamente e comece a receber matches de imóveis
-            personalizados para o seu estilo de vida.
+          <motion.p variants={fadeInUp} className="text-nin-100 text-xl mb-12 opacity-90 leading-relaxed">
+            Junte-se a centenas de moradores de Araraquara e Matão que encontraram o lugar ideal sem perder tempo com visitas frustrantes.
           </motion.p>
           <motion.div variants={fadeInUp} whileHover={hoverScale}>
-            <Link href="/register" className="btn bg-white text-nin-900 hover:bg-nin-50 text-lg px-8 py-4">
-              Criar minha conta grátis
-              <ArrowRight className="w-5 h-5 ml-2" />
+            <Link href="/register" className="btn bg-white text-nin-900 hover:bg-nin-50 text-xl px-12 py-5 shadow-2xl">
+              Encontrar meu imóvel agora
+              <ArrowRight className="w-6 h-6 ml-2" />
             </Link>
           </motion.div>
         </motion.div>

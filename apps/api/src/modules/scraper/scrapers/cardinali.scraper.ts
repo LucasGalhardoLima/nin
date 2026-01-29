@@ -103,13 +103,22 @@ export class CardinalScraper extends BaseScraper {
         const price = priceMatch ? this.normalizePrice(priceMatch[1]) : 0;
         const sourceId = codeMatch ? codeMatch[1] : this.extractPropertyId(propertyUrl);
 
-        // Extract title (usually the text line after standard info)
-        const lines = cardText.split('\n').filter(l => l.trim().length > 0);
-        const title = lines.find(l => !l.includes('R$') && !l.includes('Cód') && l.length > 10) || 'Imóvel sem título';
+        // Extract title using the correct class
+        const titleElement = await card.$('.card-titulo');
+        const title = titleElement ? (await titleElement.innerText()).trim() : 'Imóvel sem título';
         
-        // Extract Image (convert webp if needed or just take source)
+        // Extract Neighborhood/City
+        const locationElement = await card.$('.card-bairro-cidade');
+        const locationText = locationElement ? (await locationElement.innerText()).trim() : '';
+        const neighborhood = locationText.split('-')[0]?.trim() || '';
+
+        // Extract Image (prioritize lazy-load attribute)
         const imageElement = await card.$('img');
-        let imageUrl = imageElement ? await imageElement.getAttribute('src') : null;
+        let imageUrl = null;
+        if (imageElement) {
+          imageUrl = await imageElement.getAttribute('data-flickity-lazyload-src') || 
+                     await imageElement.getAttribute('src');
+        }
         
         // Ensure image URL is absolute
         if (imageUrl && !imageUrl.startsWith('http')) {
@@ -121,7 +130,7 @@ export class CardinalScraper extends BaseScraper {
         // Extract bedroom/bathroom counts from card text
         const bedrooms = this.extractNumber(cardText, /dorms?/i) || 0;
         const bathrooms = this.extractNumber(cardText, /banhos?/i) || 0;
-        const parking = this.extractNumber(cardText, /garegens?|vagas?/i) || 0;
+        const parking = this.extractNumber(cardText, /garagens?|vagas?/i) || 0;
         const suites = this.extractNumber(cardText, /suítes?/i) || 0;
 
         const data: PropertyData = {
@@ -130,15 +139,15 @@ export class CardinalScraper extends BaseScraper {
           sourceName: 'Cardinali',
           scrapingSource: this.source,
           title: title,
-          description: '', // Listing page usually doesn't have full description
+          description: '', 
           price: price,
           propertyType: this.determinePropertyType(title),
           transactionType: transactionType,
           bedrooms: bedrooms,
-          bathrooms: bathrooms + suites, // Combine or keep separate logic
-          area: 0, // Area is often not in card text
+          bathrooms: bathrooms + suites, 
+          area: 0, 
           cityName: city,
-          address: '',
+          address: locationText,
           hasParking: parking > 0,
           hasPool: title.toLowerCase().includes('piscina'),
           hasGarden: title.toLowerCase().includes('jardim'),

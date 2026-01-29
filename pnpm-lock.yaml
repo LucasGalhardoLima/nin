@@ -191,6 +191,9 @@ importers:
       '@nin/config':
         specifier: workspace:*
         version: link:../config
+      '@types/node':
+        specifier: ^20.12.12
+        version: 20.19.30
       prisma:
         specifier: ^5.14.0
         version: 5.22.0

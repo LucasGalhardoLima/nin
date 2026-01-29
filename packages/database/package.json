@@ -21,6 +21,7 @@
   },
   "devDependencies": {
     "@nin/config": "workspace:*",
+    "@types/node": "^20.12.12",
     "prisma": "^5.14.0",
     "tsx": "^4.10.0",
     "typescript": "^5.4.5"
