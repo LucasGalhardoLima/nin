@@ -1,0 +1,9 @@
+export { AnimatedSection } from './AnimatedSection';
+export { WaveDivider } from './WaveDivider';
+export { StatsSection } from './StatsSection';
+export { MatchingDiagram } from './MatchingDiagram';
+export { PropertyShowcase } from './PropertyShowcase';
+export { ComparisonTable } from './ComparisonTable';
+export { TestimonialsSection } from './TestimonialsSection';
+export { TrustSection } from './TrustSection';
+export { FAQAccordion } from './FAQAccordion';
