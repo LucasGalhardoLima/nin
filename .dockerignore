@@ -8,7 +8,6 @@ node_modules
 .specify
 .prettierrc
 README.md
-pnpm-lock.yaml
 *.log
 .env
 **/.env
