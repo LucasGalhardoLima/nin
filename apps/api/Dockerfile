@@ -59,4 +59,4 @@ RUN npx playwright install chromium
 EXPOSE 3000
 
 # Start the application
-CMD ["pnpm", "--filter", "@nin/api", "start:prod"]
+CMD ["node", "apps/api/dist/apps/api/src/main.js"]
