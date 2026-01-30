@@ -45,6 +45,7 @@ RUN pnpm install --frozen-lockfile --prod
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/packages/database/dist ./packages/database/dist
 COPY --from=builder /app/packages/database/src/generated ./packages/database/src/generated
+COPY --from=builder /app/packages/database/src/generated ./packages/database/dist/generated
 COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 
 
