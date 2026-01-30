@@ -1,14 +1,13 @@
 import { Controller, Post, Get, Body, Param, Query, UseGuards } from '@nestjs/common';
 import { ScraperService } from './scraper.service';
-import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-// import { AdminGuard } from '../../auth/guards/admin.guard'; // Assuming AdminGuard exists, otherwise just Jwt
+import { ApiKeyGuard } from '../../common/guards/api-key.guard';
 
 @Controller('admin/scraper')
-// @UseGuards(JwtAuthGuard) // TODO: Re-enable authentication after testing
 export class ScraperController {
   constructor(private readonly scraperService: ScraperService) {}
 
   @Post('run/:source')
+  @UseGuards(ApiKeyGuard)
   async triggerScraping(
     @Param('source') source: string,
     @Body() dto: { cities: string[] },

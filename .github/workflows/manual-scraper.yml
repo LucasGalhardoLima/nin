@@ -1,0 +1,35 @@
+name: Manual Scraper Trigger
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Scraper Source'
+        required: true
+        default: 'cardinali'
+        type: choice
+        options:
+          - cardinali
+          - chavesnamao
+      cities:
+        description: 'Target Cities (comma separated)'
+        required: true
+        default: 'araraquara,matao'
+        type: string
+
+jobs:
+  trigger-scraper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Scraper API
+        run: |
+          echo "Triggering scraper for source: ${{ inputs.source }}"
+          
+          # Convert comma separated string to JSON array string for the request body
+          CITIES_JSON=$(echo "${{ inputs.cities }}" | jq -R 'split(",") | map(gsub("^\\s+|\\s+$";""))')
+          
+          curl -X POST "${{ secrets.RAILWAY_URL }}/admin/scraper/run/${{ inputs.source }}" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${{ secrets.SCRAPER_API_KEY }}" \
+            -d "{\"cities\": $CITIES_JSON}" \
+            --fail-with-body

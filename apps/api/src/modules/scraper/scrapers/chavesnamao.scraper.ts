@@ -47,42 +47,46 @@ export class ChavesNaMaoScraper extends BaseScraper {
   }
 
   async scrapeListings(city: string): Promise<PropertyData[]> {
-    await this.initBrowser();
-    const allResults: PropertyData[] = [];
-    const cityCfg = this.cityMap[city.toLowerCase()];
+    try {
+      await this.initBrowser();
+      const allResults: PropertyData[] = [];
+      const cityCfg = this.cityMap[city.toLowerCase()];
 
-    if (!cityCfg) {
-      this.logger.error(`City not found in mapping: ${city}`);
-      return allResults;
-    }
-
-    for (const category of this.categories) {
-      this.logger.log(
-        `Scraping ${category.transaction} ${category.type} in ${cityCfg.displayName}...`
-      );
-
-      try {
-        const results = await this.scrapeCategory(
-          cityCfg.displayName,
-          cityCfg.urlKey,
-          category,
-          this.maxPagesPerCategory
-        );
-
-        allResults.push(...results);
-        this.logger.log(`Category complete: ${results.length} properties found`);
-
-        // Delay entre categorias
-        await this.delay(3000);
-      } catch (error) {
-        this.logger.error(
-          `Error scraping category ${category.path}: ${error.message}`
-        );
+      if (!cityCfg) {
+        this.logger.error(`City not found in mapping: ${city}`);
+        return allResults;
       }
-    }
 
-    this.logger.log(`✅ Scraping complete! Total properties found: ${allResults.length}`);
-    return allResults;
+      for (const category of this.categories) {
+        this.logger.log(
+          `Scraping ${category.transaction} ${category.type} in ${cityCfg.displayName}...`
+        );
+
+        try {
+          const results = await this.scrapeCategory(
+            cityCfg.displayName,
+            cityCfg.urlKey,
+            category,
+            this.maxPagesPerCategory
+          );
+
+          allResults.push(...results);
+          this.logger.log(`Category complete: ${results.length} properties found`);
+
+          // Delay entre categorias
+          await this.delay(3000);
+        } catch (error) {
+          this.logger.error(
+            `Error scraping category ${category.path}: ${error.message}`
+          );
+        }
+      }
+
+      this.logger.log(`✅ Scraping complete! Total properties found: ${allResults.length}`);
+      return allResults;
+    } finally {
+      await this.closeBrowser();
+    }
   }
 
   private async scrapeCategory(

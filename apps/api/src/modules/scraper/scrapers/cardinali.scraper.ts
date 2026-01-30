@@ -12,27 +12,31 @@ export class CardinalScraper extends BaseScraper {
   }
 
   async scrapeListings(city: string): Promise<PropertyData[]> {
-    await this.initBrowser();
-    
-    const allResults: PropertyData[] = [];
-    
-    // Scrape both BUY and RENT listings
-    const transactionTypes: Array<{ type: 'BUY' | 'RENT', urlPath: string }> = [
-      { type: 'BUY', urlPath: 'comprar' },
-      { type: 'RENT', urlPath: 'alugar' },
-    ];
-    
-    for (const transaction of transactionTypes) {
-      this.logger.log(`Scraping ${transaction.type} properties for ${city}...`);
+    try {
+      await this.initBrowser();
       
-      const results = await this.scrapeByTransactionType(city, transaction.type, transaction.urlPath);
-      allResults.push(...results);
+      const allResults: PropertyData[] = [];
       
-      // Small delay between transaction types
-      await this.delay(2000);
+      // Scrape both BUY and RENT listings
+      const transactionTypes: Array<{ type: 'BUY' | 'RENT', urlPath: string }> = [
+        { type: 'BUY', urlPath: 'comprar' },
+        { type: 'RENT', urlPath: 'alugar' },
+      ];
+      
+      for (const transaction of transactionTypes) {
+        this.logger.log(`Scraping ${transaction.type} properties for ${city}...`);
+        
+        const results = await this.scrapeByTransactionType(city, transaction.type, transaction.urlPath);
+        allResults.push(...results);
+        
+        // Small delay between transaction types
+        await this.delay(2000);
+      }
+      
+      return allResults;
+    } finally {
+      await this.closeBrowser();
     }
-    
-    return allResults;
   }
 
   private async scrapeByTransactionType(

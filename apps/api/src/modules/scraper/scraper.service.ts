@@ -54,17 +54,33 @@ export class ScraperService {
           const properties = await scraper.scrapeListings(city);
           totalFound += properties.length;
           
-          // Upsert properties to database
-          for (const propData of properties) {
-            try {
-              const result = await this.upsertProperty(propData);
-              if (result.created) totalAdded++;
-              else totalUpdated++;
-            } catch (err) {
-              const msg = `Failed to upsert property ${propData.sourceUrl}: ${err.message}`;
-              this.logger.error(msg);
-              errors.push(msg);
-            }
+          // Process properties in batches for better performance
+          const batchSize = 10;
+          for (let i = 0; i < properties.length; i += batchSize) {
+            const batch = properties.slice(i, i + batchSize);
+            
+            const results = await Promise.allSettled(
+              batch.map(async (propData) => {
+                try {
+                  const result = await this.upsertProperty(propData);
+                  return result;
+                } catch (err) {
+                  const msg = `Failed to upsert property ${propData.sourceUrl}: ${err.message}`;
+                  this.logger.error(msg);
+                  errors.push(msg);
+                  return { created: false };
+                }
+              })
+            );
+
+            // Count successful upserts
+            results.forEach((result) => {
+              if (result.status === 'fulfilled' && result.value.created) {
+                totalAdded++;
+              } else if (result.status === 'fulfilled' && !result.value.created) {
+                totalUpdated++;
+              }
+            });
           }
         } catch (err) {
           const msg = `Failed to scrape city ${city}: ${err.message}`;
