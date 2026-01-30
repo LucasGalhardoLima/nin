@@ -18,13 +18,13 @@ COPY apps/api ./apps/api
 # Install dependencies (including dev)
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
-# Generate Prisma Client
+# Generate Prisma Client first
 RUN pnpm --filter @nin/database db:generate
 
-# Build the database package (TypeScript compilation)
+# Build database package explicitly  
 RUN pnpm --filter @nin/database build
 
-# Build the API
+# Now build API (Turbo will respect the already-built database)
 RUN pnpm --filter @nin/api build
 
 # --- Runner Stage ---
