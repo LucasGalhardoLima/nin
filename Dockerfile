@@ -3,7 +3,8 @@ FROM mcr.microsoft.com/playwright:v1.48.0-focal AS base
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable
+# Install pnpm directly to avoid corepack signature issues
+RUN npm install -g pnpm@9.0.0
 
 WORKDIR /app
 
