@@ -47,8 +47,6 @@ COPY --from=builder /app/packages/database/dist ./packages/database/dist
 COPY --from=builder /app/packages/database/src/generated ./packages/database/src/generated
 COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 
-# Regenerate Prisma Client in production (needed for runtime)
-RUN pnpm --filter @nin/database db:generate
 
 # Set environment variables
 ENV NODE_ENV=production
