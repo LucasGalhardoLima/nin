@@ -1,0 +1,210 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============== USER & AUTH ==============
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  preferences  UserPreferences?
+  savedMatches SavedMatch[]
+}
+
+model UserPreferences {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Family
+  adultsCount   Int     @default(1)
+  childrenCount Int     @default(0)
+  minBedrooms   Int     @default(1)
+  minBathrooms  Int     @default(1)
+  hasPets       Boolean @default(false)
+
+  // Budget
+  minPrice        Float?
+  maxPrice        Float?
+  transactionType String @default("RENT") // RENT or BUY
+
+  // Location
+  targetCityId           String?
+  targetCity             City?                   @relation(fields: [targetCityId], references: [id])
+  preferredNeighborhoods PreferredNeighborhood[]
+
+  // Lifestyle weights (1-10)
+  quietnessWeight         Int @default(5)
+  schoolProximityWeight   Int @default(5)
+  hospitalProximityWeight Int @default(5)
+  commerceProximityWeight Int @default(5)
+  safetyWeight            Int @default(5)
+  publicTransportWeight   Int @default(5)
+
+  // Amenities
+  needsParking  Boolean @default(false)
+  needsGarden   Boolean @default(false)
+  needsPool     Boolean @default(false)
+  needsSecurity Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PreferredNeighborhood {
+  id             String          @id @default(cuid())
+  preferencesId  String
+  preferences    UserPreferences @relation(fields: [preferencesId], references: [id], onDelete: Cascade)
+  neighborhoodId String
+  neighborhood   Neighborhood    @relation(fields: [neighborhoodId], references: [id])
+
+  @@unique([preferencesId, neighborhoodId])
+}
+
+// ============== LOCATION ==============
+
+model City {
+  id        String   @id @default(cuid())
+  name      String
+  state     String   @default("SP")
+  latitude  Float
+  longitude Float
+  createdAt DateTime @default(now())
+
+  neighborhoods    Neighborhood[]
+  pointsOfInterest PointOfInterest[]
+  properties       Property[]
+  userPreferences  UserPreferences[]
+
+  @@unique([name, state])
+}
+
+model Neighborhood {
+  id             String   @id @default(cuid())
+  name           String
+  cityId         String
+  city           City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  quietnessScore Int      @default(5) // 1-10
+  safetyScore    Int      @default(5) // 1-10
+  createdAt      DateTime @default(now())
+
+  properties             Property[]
+  preferredNeighborhoods PreferredNeighborhood[]
+
+  @@unique([name, cityId])
+}
+
+model PointOfInterest {
+  id        String   @id @default(cuid())
+  name      String
+  type      String // SCHOOL, HOSPITAL, SUPERMARKET, PARK, BUS_STOP
+  latitude  Float
+  longitude Float
+  cityId    String
+  city      City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+// ============== PROPERTY ==============
+
+model Property {
+  id              String  @id @default(cuid())
+  sourceUrl       String  @unique
+  sourceName      String // e.g., "OLX", "ZapImoveis", "Mock"
+  title           String
+  description     String?
+  price           Float
+  propertyType    String // APARTMENT, HOUSE, CONDO, STUDIO, LAND, COMMERCIAL
+  transactionType String // RENT or BUY
+
+  bedrooms  Int
+  bathrooms Int
+  area      Float? // in m²
+
+  // Location
+  address        String?
+  cityId         String
+  city           City          @relation(fields: [cityId], references: [id])
+  neighborhoodId String?
+  neighborhood   Neighborhood? @relation(fields: [neighborhoodId], references: [id])
+  latitude       Float?
+  longitude      Float?
+
+  // Amenities
+  hasParking  Boolean @default(false)
+  hasGarden   Boolean @default(false)
+  hasPool     Boolean @default(false)
+  hasSecurity Boolean @default(false)
+  petFriendly Boolean @default(false)
+
+  // Scraping metadata
+  sourceId       String? // ID único do imóvel no site de origem
+  lastScrapedAt  DateTime?
+  scrapingSource String? // 'cardinali', 'chavesnamao', 'vivareal', 'zapimoveis'
+
+  // Status
+  isActive   Boolean  @default(true)
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  images       PropertyImage[]
+  savedMatches SavedMatch[]
+
+  @@unique([sourceId, scrapingSource])
+}
+
+model PropertyImage {
+  id         String   @id @default(cuid())
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  url        String
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+}
+
+// ============== MATCHING ==============
+
+model SavedMatch {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  matchScore     Float // 0-100
+  scoreBreakdown String // JSON string with breakdown
+
+  isFavorite Boolean   @default(false)
+  isHidden   Boolean   @default(false)
+  viewedAt   DateTime?
+  savedAt    DateTime  @default(now())
+
+  @@unique([userId, propertyId])
+}
+
+// ============== SCRAPING ==============
+
+model ScrapingJob {
+  id           String    @id @default(cuid())
+  source       String // 'cardinali', 'chavesnamao', 'vivareal', 'zapimoveis'
+  status       String // 'running', 'completed', 'failed'
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+  itemsFound   Int       @default(0)
+  itemsAdded   Int       @default(0)
+  itemsUpdated Int       @default(0)
+  errors       String? // JSON string with errors
+  createdAt    DateTime  @default(now())
+}
