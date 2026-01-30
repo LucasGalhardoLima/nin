@@ -77,7 +77,9 @@ export default function PreferencesPage() {
     );
   }
 
-  const updatePrefs = (section: keyof UserPreferences, key: string, value: unknown) => {
+  const updatePrefs = (section: Exclude<keyof UserPreferences, 'id'>, key: string, value: unknown) => {
+    if (!preferences) return;
+
     setPreferences({
       ...preferences,
       [section]: {
@@ -187,11 +189,10 @@ export default function PreferencesPage() {
                   {(['RENT', 'BUY'] as const).map((type) => (
                     <label
                       key={type}
-                      className={`flex-1 p-3 rounded-nin-sm border-2 cursor-pointer text-center ${
-                        preferences.budget.transactionType === type
+                      className={`flex-1 p-3 rounded-nin-sm border-2 cursor-pointer text-center ${preferences.budget.transactionType === type
                           ? 'border-nin-500 bg-nin-50'
                           : 'border-nin-200'
-                      }`}
+                        }`}
                     >
                       <input
                         type="radio"
@@ -266,11 +267,10 @@ export default function PreferencesPage() {
                     {neighborhoods.map((n) => (
                       <label
                         key={n.id}
-                        className={`flex items-center gap-2 p-2 rounded-nin-sm border-2 cursor-pointer text-sm ${
-                          preferences.location.preferredNeighborhoodIds.includes(n.id)
+                        className={`flex items-center gap-2 p-2 rounded-nin-sm border-2 cursor-pointer text-sm ${preferences.location.preferredNeighborhoodIds.includes(n.id)
                             ? 'border-nin-500 bg-nin-50'
                             : 'border-nin-200'
-                        }`}
+                          }`}
                       >
                         <input
                           type="checkbox"
@@ -347,11 +347,10 @@ export default function PreferencesPage() {
               ].map(({ key, label }) => (
                 <label
                   key={key}
-                  className={`flex items-center gap-2 p-3 rounded-nin-sm border-2 cursor-pointer ${
-                    preferences.amenities[key as keyof typeof preferences.amenities]
+                  className={`flex items-center gap-2 p-3 rounded-nin-sm border-2 cursor-pointer ${preferences.amenities[key as keyof typeof preferences.amenities]
                       ? 'border-nin-500 bg-nin-50'
                       : 'border-nin-200'
-                  }`}
+                    }`}
                 >
                   <input
                     type="checkbox"
