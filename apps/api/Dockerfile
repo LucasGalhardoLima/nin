@@ -16,7 +16,7 @@ COPY packages ./packages
 COPY apps/api ./apps/api
 
 # Install dependencies (including dev)
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 # Generate Prisma Client first
 RUN pnpm --filter @nin/database db:generate
@@ -38,7 +38,7 @@ COPY packages ./packages
 COPY apps/api/package.json ./apps/api/package.json
 
 # Install only production dependencies
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod
 
 # Copy built artifacts from builder
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
