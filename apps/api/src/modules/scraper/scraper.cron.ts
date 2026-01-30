@@ -14,7 +14,7 @@ export class ScraperCron {
   async handleDailyScraping() {
     this.logger.log('Starting daily scraping job...');
 
-    const sources = ['cardinali']; // Add other sources as they are implemented
+    const sources = ['cardinali', 'chavesnamao']; // Add other sources as they are implemented
     const cities = ['araraquara', 'matao'];
 
     for (const source of sources) {
