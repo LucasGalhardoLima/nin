@@ -357,27 +357,21 @@ export class ChavesNaMaoScraper extends BaseScraper {
       const cleanText = `${data.aria} ${data.title} ${data.text}`.trim().toLowerCase();
 
       // Quartos
-      if (
-        (cleanText.includes('quarto') || cleanText.includes('dorm')) &&
-        !bedrooms
-      ) {
-        const match = cleanText.match(/(\d+)/);
-        if (match) bedrooms = parseInt(match[1]);
+      if (!bedrooms) {
+        const match = this.extractCountByKeyword(cleanText, /(quarto|dorm)/i, 20);
+        if (match !== undefined) bedrooms = match;
       }
 
       // Banheiros
-      if (cleanText.includes('banh') && !bathrooms) {
-        const match = cleanText.match(/(\d+)/);
-        if (match) bathrooms = parseInt(match[1]);
+      if (!bathrooms) {
+        const match = this.extractCountByKeyword(cleanText, /banh/i, 20);
+        if (match !== undefined) bathrooms = match;
       }
 
       // Vagas
-      if (
-        (cleanText.includes('vaga') || cleanText.includes('garag')) &&
-        !parkingSpaces
-      ) {
-        const match = cleanText.match(/(\d+)/);
-        if (match) parkingSpaces = parseInt(match[1]);
+      if (!parkingSpaces) {
+        const match = this.extractCountByKeyword(cleanText, /(vaga|garag)/i, 20);
+        if (match !== undefined) parkingSpaces = match;
       }
 
       // Área
@@ -413,6 +407,25 @@ export class ChavesNaMaoScraper extends BaseScraper {
   private parseArea(text: string): number | undefined {
     const match = text.match(/(\d{2,4})\s*(m²|m2)/i);
     if (match) return parseInt(match[1], 10);
+    return undefined;
+  }
+
+  private extractCountByKeyword(text: string, keyword: RegExp, maxReasonable: number): number | undefined {
+    const patterns = [
+      new RegExp(`(\\d+)\\s*${keyword.source}`, 'i'),
+      new RegExp(`${keyword.source}\\s*(\\d+)`, 'i'),
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const value = parseInt(match[1], 10);
+        if (!Number.isNaN(value) && value > 0 && value <= maxReasonable) {
+          return value;
+        }
+      }
+    }
+
     return undefined;
   }
 
@@ -461,27 +474,27 @@ export class ChavesNaMaoScraper extends BaseScraper {
       await detailPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
       await this.waitForPageReady(detailPage);
 
-      const labels = await detailPage.$$eval('[aria-label]', (els) =>
-        els.map((el) => el.getAttribute('aria-label') || '').filter(Boolean)
-      );
-      const titles = await detailPage.$$eval('[title]', (els) =>
-        els.map((el) => el.getAttribute('title') || '').filter(Boolean)
-      );
-      const combined = [...labels, ...titles].map((t) => t.toLowerCase());
-
-      const getCount = (needle: string) => {
-        const found = combined.find((text) => text.includes(needle));
-        if (!found) return undefined;
-        const match = found.match(/(\d+)/);
+      const html = await detailPage.content();
+      const regexNumber = (pattern: RegExp) => {
+        const match = html.match(pattern);
         return match ? parseInt(match[1], 10) : undefined;
       };
 
-      const bedrooms = getCount('quarto') ?? getCount('dorm');
-      const bathrooms = getCount('banh');
-      const parkingSpaces = getCount('vaga') ?? getCount('garag');
+      const bedrooms =
+        regexNumber(/\"bedrooms\"\s*:\s*\{\s*\"count\"\s*:\s*(\d+)/i) ||
+        regexNumber(/\"bedrooms\"\s*:\s*(\d+)/i);
+      const bathrooms =
+        regexNumber(/\"bathrooms\"\s*:\s*\{\s*\"count\"\s*:\s*(\d+)/i) ||
+        regexNumber(/\"bathrooms\"\s*:\s*(\d+)/i);
+      const parkingSpaces =
+        regexNumber(/\"garages\"\s*:\s*\{\s*\"count\"\s*:\s*(\d+)/i) ||
+        regexNumber(/\"garages\"\s*:\s*(\d+)/i);
 
-      const areaLabel = combined.find((text) => text.includes('m²') || text.includes('m2'));
-      const area = areaLabel ? this.parseArea(areaLabel) : undefined;
+      const area =
+        regexNumber(/\"area\"\s*:\s*\{\s*\"total\"\s*:\s*\"?(\d{2,4})\"?/i) ||
+        regexNumber(/\"area\"\s*:\s*\{\s*\"useful\"\s*:\s*\"?(\d{2,4})\"?/i) ||
+        regexNumber(/\"area\"\s*:\s*\"?(\d{2,4})\"?\s*,/i) ||
+        this.parseAreaFromUrl(url);
 
       return {
         bedrooms,

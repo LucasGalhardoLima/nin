@@ -83,7 +83,7 @@ export class CardinalScraper extends BaseScraper {
     this.logger.log(`Navigating to ${url} with city ID ${cityCfg.id}`);
     
     const page = await context.newPage();
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    await this.gotoWithRetry(page, url);
     
     // Wait for cards to load
     await this.waitForPageReady(page);
@@ -214,5 +214,28 @@ export class CardinalScraper extends BaseScraper {
   private extractNumber(text: string, regex: RegExp): number {
       const match = text.match(new RegExp(`(\\d+)\\s*${regex.source}`, 'i'));
       return match ? parseInt(match[1], 10) : 0;
+  }
+
+  private async gotoWithRetry(page: Page, url: string): Promise<void> {
+    const attempts = [
+      { timeout: 60000, waitUntil: 'domcontentloaded' as const },
+      { timeout: 90000, waitUntil: 'domcontentloaded' as const },
+    ];
+
+    let lastError: Error | null = null;
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        await page.goto(url, attempts[i]);
+        await this.waitForPageReady(page);
+        return;
+      } catch (error) {
+        lastError = error as Error;
+        this.logger.warn(`Navigation attempt ${i + 1} failed: ${lastError.message}`);
+      }
+    }
+
+    if (lastError) {
+      throw lastError;
+    }
   }
 }

@@ -18,6 +18,7 @@ import {
   Trees,
   Shield,
   PawPrint,
+  AlertTriangle,
   ExternalLink,
   Settings,
   LogOut,
@@ -118,6 +119,7 @@ export default function DashboardPage() {
 
   const guestPrefs = !user ? api.getGuestPreferences() : null;
   const targetCityId = user ? prefs?.location?.targetCityId : guestPrefs?.location?.targetCityId;
+  const maxPrice = user ? prefs?.budget?.maxPrice ?? null : guestPrefs?.budget?.maxPrice ?? null;
 
   // SWR for neighborhoods
   const { data: neighborhoods = [] } = useSWR(
@@ -467,6 +469,7 @@ export default function DashboardPage() {
                             onSave={handleSave}
                             onHide={handleHide}
                             loading={actionLoading === match.property.id}
+                            maxPrice={maxPrice}
                           />
                         ))}
                       </div>
@@ -488,13 +491,19 @@ const PropertyCard = memo(function PropertyCard({
   onSave,
   onHide,
   loading,
+  maxPrice,
 }: {
   match: PropertyMatch;
   onSave: (propertyId: string) => void;
   onHide: (propertyId: string) => void;
   loading: boolean;
+  maxPrice: number | null;
 }) {
   const { property, matchScore, scoreBreakdown, isFavorite } = match;
+  const isOverBudget =
+    maxPrice !== null &&
+    property.price > maxPrice &&
+    matchScore >= 70;
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'bg-gradient-to-br from-match-excellent to-emerald-600 shadow-sm ring-1 ring-white/20';
@@ -553,6 +562,12 @@ const PropertyCard = memo(function PropertyCard({
               <span className="text-sm font-normal text-nin-400 ml-1">/mês</span>
             )}
           </span>
+          {isOverBudget && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Acima do orçamento
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 text-nin-500 text-sm mb-5 bg-nin-50/50 p-2 rounded-lg -mx-2">
