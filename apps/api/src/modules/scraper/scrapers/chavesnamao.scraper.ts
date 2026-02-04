@@ -224,18 +224,32 @@ export class ChavesNaMaoScraper extends BaseScraper {
     // Características (quartos, banheiros, área, vagas)
     let features = await this.extractFeatures(page, content);
 
+    const titleArea = this.parseAreaFromText(title);
+    if (!features.area && titleArea) {
+      features.area = titleArea;
+    }
+
+    const urlArea = this.parseAreaFromUrl(absoluteUrl);
+    if (!features.area && urlArea) {
+      features.area = urlArea;
+    }
+
     if (
-      features.bedrooms === undefined ||
-      features.bathrooms === undefined ||
-      features.area === undefined
+      this.isMissingBedrooms(features.bedrooms, title) ||
+      this.isMissingBathrooms(features.bathrooms) ||
+      this.isMissingArea(features.area)
     ) {
       const details = await this.fetchDetailsFromPropertyPage(absoluteUrl);
       if (details) {
         features = {
-          bedrooms: features.bedrooms ?? details.bedrooms,
-          bathrooms: features.bathrooms ?? details.bathrooms,
+          bedrooms: this.isMissingBedrooms(features.bedrooms, title)
+            ? details.bedrooms
+            : features.bedrooms,
+          bathrooms: this.isMissingBathrooms(features.bathrooms)
+            ? details.bathrooms
+            : features.bathrooms,
           parkingSpaces: features.parkingSpaces ?? details.parkingSpaces,
-          area: features.area ?? details.area,
+          area: this.isMissingArea(features.area) ? details.area : features.area,
         };
       }
     }
@@ -400,6 +414,39 @@ export class ChavesNaMaoScraper extends BaseScraper {
     const match = text.match(/(\d{2,4})\s*(m²|m2)/i);
     if (match) return parseInt(match[1], 10);
     return undefined;
+  }
+
+  private parseAreaFromText(text: string): number | undefined {
+    return this.parseArea(text);
+  }
+
+  private parseAreaFromUrl(url: string): number | undefined {
+    const match = url.match(/(\d{2,4})m2/i);
+    if (match) return parseInt(match[1], 10);
+    return undefined;
+  }
+
+  private isMissingBedrooms(value: number | undefined, title: string): boolean {
+    if (value === undefined) return true;
+    if (value > 0) return false;
+    const text = title.toLowerCase();
+    // Studios/kitnet can legitimately be 0 or 1 room
+    if (text.includes('studio') || text.includes('kitnet') || text.includes('quitinete')) {
+      return false;
+    }
+    return true;
+  }
+
+  private isMissingBathrooms(value: number | undefined): boolean {
+    if (value === undefined) return true;
+    if (value === 0) return true;
+    return false;
+  }
+
+  private isMissingArea(value: number | undefined): boolean {
+    if (value === undefined) return true;
+    if (value < 10) return true;
+    return false;
   }
 
   private async fetchDetailsFromPropertyPage(url: string): Promise<{
