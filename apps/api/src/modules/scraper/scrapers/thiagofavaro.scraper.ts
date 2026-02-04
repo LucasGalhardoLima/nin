@@ -17,8 +17,6 @@ export class ThiagoFavaroScraper extends BaseScraper {
     'apartamento',
     'casa-em-condominio',
     'sobrado',
-    'terreno',
-    'comercial',
     'cobertura',
   ];
 
@@ -100,10 +98,24 @@ export class ThiagoFavaroScraper extends BaseScraper {
       if (!title) return null;
 
       const html = await page.content();
+      const pageText = await page.evaluate(() => document.body.innerText || '');
+
       const priceMatch = html.match(/R\$\s?[\d\.\,]+/);
       const price = priceMatch ? this.normalizePrice(priceMatch[0]) : 0;
 
-      const counts = this.extractCountsFromHtml(html);
+      const counts = this.extractCountsFromText(pageText);
+      const areaDetails = this.extractAreaDetailsFromText(pageText);
+      const area = areaDetails.built ?? areaDetails.total ?? counts.area ?? 0;
+
+      const descriptionText = this.extractSectionText(pageText, /descri[cç][aã]o do im[oó]vel/i);
+      const proximidades = this.extractProximidades(pageText);
+      const combinedDescription = this.combineDescription(descriptionText, proximidades);
+
+      const hasSecurity = /portaria\s*24|portaria\s*24h|seguran[cç]a|vigil[aâ]ncia|condom[ií]nio fechado/i.test(
+        combinedDescription.toLowerCase()
+      );
+      const hasGarden = /jardim|quintal|gramado/i.test(combinedDescription.toLowerCase());
+      const hasPool = /piscina/i.test(combinedDescription.toLowerCase());
 
       const images = await page.evaluate(() => {
         const og = document.querySelector('meta[property="og:image"]') as HTMLMetaElement | null;
@@ -117,6 +129,11 @@ export class ThiagoFavaroScraper extends BaseScraper {
       });
 
       const sourceId = this.extractSourceId(url);
+      const resolvedType = this.determinePropertyType(title);
+
+      if (resolvedType === 'LAND' || resolvedType === 'COMMERCIAL') {
+        return null;
+      }
 
       return {
         sourceId,
@@ -124,19 +141,19 @@ export class ThiagoFavaroScraper extends BaseScraper {
         sourceName: 'Thiago Favaro Imoveis',
         scrapingSource: this.source,
         title,
-        description: '',
+        description: combinedDescription,
         price,
-        propertyType: this.determinePropertyType(title),
+        propertyType: resolvedType,
         transactionType: transactionType || 'BUY',
         bedrooms: counts.bedrooms ?? 0,
         bathrooms: counts.bathrooms ?? 0,
-        area: counts.area ?? 0,
+        area,
         cityName: city || '',
         address: '',
         hasParking: (counts.parkingSpaces ?? 0) > 0,
-        hasPool: title.toLowerCase().includes('piscina'),
-        hasGarden: title.toLowerCase().includes('jardim'),
-        hasSecurity: title.toLowerCase().includes('condomínio'),
+        hasPool,
+        hasGarden,
+        hasSecurity,
         images,
       };
     } catch (error) {
@@ -162,29 +179,101 @@ export class ThiagoFavaroScraper extends BaseScraper {
     return Array.from(new Set(urls));
   }
 
-  private extractCountsFromHtml(html: string): {
+  private extractCountsFromText(text: string): {
     bedrooms?: number;
     bathrooms?: number;
     parkingSpaces?: number;
     area?: number;
   } {
-    const lower = html.toLowerCase();
+    const lower = text.toLowerCase();
     const extractByKeyword = (keyword: RegExp, max: number) => {
-      const match = lower.match(new RegExp(`(\\d{1,2})\\s*${keyword.source}`));
+      const match = lower.match(new RegExp(`(\\d{1,2})\\s*${keyword.source}`, 'i'));
       if (!match) return undefined;
       const value = parseInt(match[1], 10);
       if (Number.isNaN(value) || value <= 0 || value > max) return undefined;
       return value;
     };
 
-    const bedrooms = extractByKeyword(/quarto|dorm/, 10);
-    const bathrooms = extractByKeyword(/banh/, 10);
+    const bedrooms = extractByKeyword(/dormit[oó]rio|quarto|dorm/, 10);
+    const bathrooms = extractByKeyword(/banheiro|banh/, 10);
     const parkingSpaces = extractByKeyword(/vaga|garag/, 20);
 
-    const areaMatch = lower.match(/(\d{2,4})\s*(m²|m2)/);
+    const areaMatch = lower.match(/(\d{2,4})\s*(m²|m2)/i);
     const area = areaMatch ? parseInt(areaMatch[1], 10) : undefined;
 
     return { bedrooms, bathrooms, parkingSpaces, area };
+  }
+
+  private extractAreaDetailsFromText(text: string): {
+    total?: number;
+    built?: number;
+  } {
+    const parseNumber = (value: string) => {
+      const normalized = value.replace(/\./g, '').replace(',', '.');
+      const parsed = parseFloat(normalized);
+      return Number.isNaN(parsed) ? undefined : parsed;
+    };
+
+    const totalMatch = text.match(/Área Total:\s*([\d.,]+)\s*m²/i);
+    const builtMatch = text.match(/Área Constru[ií]da:\s*([\d.,]+)\s*m²/i);
+    const usefulMatch = text.match(/Área [ÚU]til:\s*([\d.,]+)\s*m²/i);
+    const landMatch = text.match(/Área Terreno:\s*([\d.,]+)\s*m²/i);
+
+    return {
+      total: totalMatch ? parseNumber(totalMatch[1]) : undefined,
+      built: builtMatch ? parseNumber(builtMatch[1]) : usefulMatch ? parseNumber(usefulMatch[1]) : landMatch ? parseNumber(landMatch[1]) : undefined,
+    };
+  }
+
+  private extractSectionText(text: string, heading: RegExp): string {
+    const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+    const index = lines.findIndex((line) => heading.test(line));
+    if (index === -1) return '';
+
+    const collected: string[] = [];
+    for (let i = index + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^proximidades$/i.test(line)) break;
+      if (/^caracter[ií]sticas$/i.test(line)) break;
+      if (/^c[oô]modos$/i.test(line)) break;
+      if (/^áreas comuns$/i.test(line)) break;
+      if (/^observa[cç][aã]o/i.test(line)) break;
+      if (/^área total/i.test(line)) break;
+      collected.push(line);
+      if (collected.length >= 12) break;
+    }
+
+    return collected.join('\n').trim();
+  }
+
+  private extractProximidades(text: string): string[] {
+    const lines = text.split('\n').map((line) => line.trim()).filter(Boolean);
+    const index = lines.findIndex((line) => /^proximidades$/i.test(line));
+    if (index === -1) return [];
+
+    const items: string[] = [];
+    for (let i = index + 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (/^caracter[ií]sticas$/i.test(line)) break;
+      if (/^c[oô]modos$/i.test(line)) break;
+      if (/^áreas comuns$/i.test(line)) break;
+      if (/^descri[cç][aã]o do im[oó]vel$/i.test(line)) break;
+      if (/^observa[cç][aã]o/i.test(line)) break;
+      if (line.length > 40) continue;
+      items.push(line);
+      if (items.length >= 8) break;
+    }
+
+    return Array.from(new Set(items));
+  }
+
+  private combineDescription(description: string, proximidades: string[]): string {
+    const parts = [];
+    if (description) parts.push(description);
+    if (proximidades.length > 0) {
+      parts.push(`Proximidades: ${proximidades.join(', ')}`);
+    }
+    return parts.join('\n');
   }
 
   private determinePropertyType(title: string): string {

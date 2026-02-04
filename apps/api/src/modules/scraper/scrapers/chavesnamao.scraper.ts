@@ -256,6 +256,11 @@ export class ChavesNaMaoScraper extends BaseScraper {
       }
     }
 
+    const safeBedrooms = this.clampCount(features.bedrooms, 10) ?? 0;
+    const safeBathrooms = this.clampCount(features.bathrooms, 10) ?? 0;
+    const safeParking = this.clampCount(features.parkingSpaces, 20) ?? 0;
+    const safeArea = features.area && features.area >= 10 ? features.area : 0;
+
     const normalizedType = this.determinePropertyType(title, propertyType);
 
     if (!title || title.length < 5) {
@@ -282,12 +287,12 @@ export class ChavesNaMaoScraper extends BaseScraper {
       price: price !== null ? price : undefined, 
       propertyType: normalizedType,
       transactionType,
-      bedrooms: features.bedrooms || 0,
-      bathrooms: features.bathrooms || 0,
-      area: features.area || 0,
+      bedrooms: safeBedrooms,
+      bathrooms: safeBathrooms,
+      area: safeArea,
       cityName: city,
       address: '',
-      hasParking: (features.parkingSpaces || 0) > 0,
+      hasParking: safeParking > 0,
       hasPool: title.toLowerCase().includes('piscina'),
       hasGarden: title.toLowerCase().includes('jardim'),
       hasSecurity: title.toLowerCase().includes('condomínio'),

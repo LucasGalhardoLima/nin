@@ -250,7 +250,7 @@ export class MatchingService {
   }
 
   private calculateSpaceScore(
-    property: { bedrooms: number; bathrooms: number },
+    property: { bedrooms: number; bathrooms: number; area: number | null },
     preferences: { minBedrooms: number; minBathrooms: number },
   ): number {
     let score = 100;
@@ -268,6 +268,23 @@ export class MatchingService {
     if (property.bathrooms < preferences.minBathrooms) {
       const diff = preferences.minBathrooms - property.bathrooms;
       score -= diff * 20; // -20 points per missing bathroom
+    }
+
+    // Area-based bonus/penalty when available
+    if (property.area && property.area > 0) {
+      if (property.area >= 200) {
+        score += 12;
+      } else if (property.area >= 150) {
+        score += 10;
+      } else if (property.area >= 120) {
+        score += 8;
+      } else if (property.area >= 90) {
+        score += 6;
+      } else if (property.area >= 70) {
+        score += 4;
+      } else if (property.area < 40) {
+        score -= 10;
+      }
     }
 
     // Penalize unknown values to avoid over-ranking incomplete listings
@@ -322,6 +339,7 @@ export class MatchingService {
       longitude: number | null;
       neighborhoodId: string | null;
       neighborhood?: { quietnessScore: number; safetyScore: number } | null;
+      description?: string | null;
     },
     preferences: {
       quietnessWeight: number;
@@ -342,9 +360,20 @@ export class MatchingService {
 
     const hasGeo = property.latitude !== null && property.longitude !== null;
     const hasNeighborhood = !!property.neighborhood;
+    const textSignals = this.extractLifestyleSignals(property.description ?? '');
+    const hasTextSignals = Object.values(textSignals).some(Boolean);
+
+    const geoWeightTotal = Object.values(poiWeights).reduce((a, b) => a + b, 0);
+    const textWeightTotal = hasTextSignals
+      ? Object.entries(poiWeights).reduce(
+          (sum, [type, weight]) =>
+            sum + (textSignals[type as keyof typeof textSignals] ? weight : 0),
+          0,
+        )
+      : 0;
 
     const totalWeight =
-      (hasGeo ? Object.values(poiWeights).reduce((a, b) => a + b, 0) : 0) +
+      (hasGeo ? geoWeightTotal : textWeightTotal) +
       (hasNeighborhood ? preferences.quietnessWeight + preferences.safetyWeight : 0);
 
     if (totalWeight === 0) return 50;
@@ -386,6 +415,13 @@ export class MatchingService {
 
         weightedScore += proximityScore * (weight / totalWeight);
       }
+    } else if (hasTextSignals && textWeightTotal > 0) {
+      const textProximityScore = 78;
+      for (const [poiType, weight] of Object.entries(poiWeights)) {
+        if (!textSignals[poiType as keyof typeof textSignals]) continue;
+        if (weight === 0) continue;
+        weightedScore += textProximityScore * (weight / totalWeight);
+      }
     }
 
     // Quietness scoring using neighborhood data
@@ -401,6 +437,26 @@ export class MatchingService {
     }
 
     return Math.min(100, weightedScore);
+  }
+
+  private extractLifestyleSignals(description: string): {
+    SCHOOL: boolean;
+    HOSPITAL: boolean;
+    SUPERMARKET: boolean;
+    BUS_STOP: boolean;
+  } {
+    const text = description.toLowerCase();
+    return {
+      SCHOOL: /escola|col[eé]gio|creche|universidade/.test(text),
+      HOSPITAL: /hospital|cl[ií]nica|upa|posto de sa[úu]de|pronto socorro/.test(text),
+      SUPERMARKET:
+        /supermercado|mercado|mercearia|farm[aá]cia|padaria|shopping|restaurante/.test(
+          text,
+        ),
+      BUS_STOP: /ponto de [oô]nibus|ônibus|terminal|transporte p[uú]blico|metr[oô]|trem/.test(
+        text,
+      ),
+    };
   }
 
   private calculateRecencyBoost(date: Date | null | undefined): number {
@@ -438,6 +494,7 @@ export class MatchingService {
       hasPool: boolean;
       hasSecurity: boolean;
       petFriendly: boolean;
+      description?: string | null;
     },
     preferences: {
       needsParking: boolean;
@@ -447,15 +504,23 @@ export class MatchingService {
       hasPets: boolean;
     },
   ): number {
-    let score = 100;
     let requiredCount = 0;
-    let matchedCount = 0;
+    let matchedPoints = 0;
+    const descriptionText = (property.description || '').toLowerCase();
+    const hasSecurityMention =
+      /portaria\s*24|portaria\s*24h|seguran[cç]a|vigil[aâ]ncia|condom[ií]nio fechado/.test(
+        descriptionText,
+      );
 
     const checks = [
       { needed: preferences.needsParking, has: property.hasParking },
       { needed: preferences.needsGarden, has: property.hasGarden },
       { needed: preferences.needsPool, has: property.hasPool },
-      { needed: preferences.needsSecurity, has: property.hasSecurity },
+      {
+        needed: preferences.needsSecurity,
+        has: property.hasSecurity,
+        partial: hasSecurityMention,
+      },
       { needed: preferences.hasPets, has: property.petFriendly },
     ];
 
@@ -463,7 +528,9 @@ export class MatchingService {
       if (check.needed) {
         requiredCount++;
         if (check.has) {
-          matchedCount++;
+          matchedPoints += 1;
+        } else if ('partial' in check && check.partial) {
+          matchedPoints += 0.5;
         }
       }
     }
@@ -473,7 +540,7 @@ export class MatchingService {
     }
 
     // Score based on percentage of matched requirements
-    score = (matchedCount / requiredCount) * 100;
+    let score = (matchedPoints / requiredCount) * 100;
 
     // Bonus points for extra amenities
     const extraAmenities = checks.filter((c) => !c.needed && c.has).length;
