@@ -22,6 +22,17 @@ export default function LoginPage() {
       const result = await api.login({ email, password });
       api.setToken(result.accessToken);
 
+      // Sync guest preferences if they exist
+      const guestPrefs = api.getGuestPreferences();
+      if (guestPrefs) {
+        try {
+          await api.updatePreferences(guestPrefs);
+          api.setGuestPreferences(null);
+        } catch (syncError) {
+          console.error('Failed to sync guest preferences:', syncError);
+        }
+      }
+
       if (result.user.hasCompletedOnboarding) {
         router.push('/dashboard');
       } else {

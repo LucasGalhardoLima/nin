@@ -39,6 +39,9 @@ class ApiClient {
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        this.setToken(null);
+      }
       const error = await response.json().catch(() => ({ message: 'Request failed' }));
       throw new Error(error.message || `HTTP ${response.status}`);
     }

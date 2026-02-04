@@ -6,6 +6,50 @@ import Link from 'next/link';
 import { Home, ArrowLeft, Loader2, Save, Check } from 'lucide-react';
 import { api, UserPreferences, City, Neighborhood } from '@/lib/api';
 
+const getDefaultPreferences = (): UserPreferences => ({
+  id: 'guest',
+  family: {
+    adultsCount: 1,
+    childrenCount: 0,
+    minBedrooms: 1,
+    minBathrooms: 1,
+    hasPets: false,
+  },
+  budget: {
+    minPrice: null,
+    maxPrice: null,
+    transactionType: 'RENT',
+  },
+  location: {
+    targetCityId: null,
+    preferredNeighborhoodIds: [],
+  },
+  lifestyle: {
+    quietnessWeight: 5,
+    schoolProximityWeight: 5,
+    hospitalProximityWeight: 5,
+    commerceProximityWeight: 5,
+    safetyWeight: 5,
+    publicTransportWeight: 5,
+  },
+  amenities: {
+    needsParking: false,
+    needsGarden: false,
+    needsPool: false,
+    needsSecurity: false,
+    needsGym: false,
+    needsPlayground: false,
+    needsGreenArea: false,
+  },
+  personal: {
+    prefersFamilyRhythm: false,
+    prefersQuietRestful: false,
+    prefersConvenience: false,
+    prefersWorkFromHome: false,
+    prefersOutdoorLife: false,
+  },
+});
+
 export default function PreferencesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -18,19 +62,30 @@ export default function PreferencesPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [prefs, citiesData] = await Promise.all([
-          api.getPreferences(),
-          api.getCities(),
-        ]);
-        setPreferences(prefs);
+        const citiesData = await api.getCities();
         setCities(citiesData);
 
-        if (prefs?.location.targetCityId) {
-          const hoods = await api.getNeighborhoods(prefs.location.targetCityId);
-          setNeighborhoods(hoods);
+        const token = api.getToken();
+        if (token) {
+          const prefs = await api.getPreferences();
+          setPreferences(prefs);
+          if (prefs?.location.targetCityId) {
+            const hoods = await api.getNeighborhoods(prefs.location.targetCityId);
+            setNeighborhoods(hoods);
+          }
+        } else {
+          const guestPrefs = api.getGuestPreferences();
+          const prefs = guestPrefs
+            ? { ...getDefaultPreferences(), ...guestPrefs }
+            : getDefaultPreferences();
+          setPreferences(prefs);
+          if (prefs.location.targetCityId) {
+            const hoods = await api.getNeighborhoods(prefs.location.targetCityId);
+            setNeighborhoods(hoods);
+          }
         }
-      } catch {
-        router.push('/login');
+      } catch (error) {
+        console.error('Failed to load preferences:', error);
       } finally {
         setLoading(false);
       }
@@ -53,14 +108,23 @@ export default function PreferencesPage() {
 
     setSaving(true);
     try {
-      await api.updatePreferences({
+      const payload = {
         family: preferences.family,
         budget: preferences.budget,
         location: preferences.location,
         lifestyle: preferences.lifestyle,
         amenities: preferences.amenities,
         personal: preferences.personal,
-      });
+      };
+      if (api.getToken()) {
+        try {
+          await api.updatePreferences(payload);
+        } catch (error) {
+          api.setGuestPreferences(payload);
+        }
+      } else {
+        api.setGuestPreferences(payload);
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {

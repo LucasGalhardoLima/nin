@@ -20,6 +20,7 @@ const STEPS = [
   { id: 'essentials', title: 'Essenciais', icon: MapPin },
   { id: 'space', title: 'Espaço & Família', icon: Home },
   { id: 'lifestyle', title: 'Estilo de Vida', icon: Heart },
+  { id: 'personal', title: 'Estilo Pessoal', icon: Heart },
 ];
 
 const slideVariants = {
@@ -63,7 +64,45 @@ export default function OnboardingPage() {
     commerceProximityWeight: 5,
     safetyWeight: 5,
     publicTransportWeight: 5,
+    prefersFamilyRhythm: false,
+    prefersQuietRestful: false,
+    prefersConvenience: false,
+    prefersWorkFromHome: false,
+    prefersOutdoorLife: false,
+    needsParking: false,
+    needsGarden: false,
+    needsPool: false,
+    needsSecurity: false,
+    needsGym: false,
+    needsPlayground: false,
+    needsGreenArea: false,
   });
+
+  const recommendedPersonal = (() => {
+    if (formData.childrenCount > 0) return 'prefersFamilyRhythm';
+    if (formData.quietnessWeight >= 8) return 'prefersQuietRestful';
+    if (formData.commerceProximityWeight >= 8) return 'prefersConvenience';
+    if (formData.minBedrooms >= 3) return 'prefersWorkFromHome';
+    return 'prefersOutdoorLife';
+  })();
+
+  const personalOptions = [
+    { key: 'prefersFamilyRhythm', label: 'Ritmo de família' },
+    { key: 'prefersQuietRestful', label: 'Quieto e tranquilo' },
+    { key: 'prefersConvenience', label: 'Conveniência diária' },
+    { key: 'prefersWorkFromHome', label: 'Home office' },
+    { key: 'prefersOutdoorLife', label: 'Vida ao ar livre' },
+  ] as const;
+
+  const amenityOptions = [
+    { key: 'needsParking', label: 'Garagem' },
+    { key: 'needsGarden', label: 'Jardim' },
+    { key: 'needsPool', label: 'Piscina' },
+    { key: 'needsSecurity', label: 'Segurança 24h' },
+    { key: 'needsGym', label: 'Academia' },
+    { key: 'needsPlayground', label: 'Playground' },
+    { key: 'needsGreenArea', label: 'Área verde' },
+  ] as const;
 
   useEffect(() => {
     api.getCities().then(setCities).catch(console.error);
@@ -112,10 +151,30 @@ export default function OnboardingPage() {
           safetyWeight: formData.safetyWeight,
           publicTransportWeight: formData.publicTransportWeight,
         },
+        personal: {
+          prefersFamilyRhythm: formData.prefersFamilyRhythm,
+          prefersQuietRestful: formData.prefersQuietRestful,
+          prefersConvenience: formData.prefersConvenience,
+          prefersWorkFromHome: formData.prefersWorkFromHome,
+          prefersOutdoorLife: formData.prefersOutdoorLife,
+        },
+        amenities: {
+          needsParking: formData.needsParking,
+          needsGarden: formData.needsGarden,
+          needsPool: formData.needsPool,
+          needsSecurity: formData.needsSecurity,
+          needsGym: formData.needsGym,
+          needsPlayground: formData.needsPlayground,
+          needsGreenArea: formData.needsGreenArea,
+        },
       };
 
       if (api.getToken()) {
-        await api.updatePreferences(preferences);
+        try {
+          await api.updatePreferences(preferences);
+        } catch (error) {
+          api.setGuestPreferences(preferences);
+        }
       } else {
         api.setGuestPreferences(preferences);
       }
@@ -137,7 +196,8 @@ export default function OnboardingPage() {
       safetyWeight: 5,
       publicTransportWeight: 5,
     }));
-    await handleSubmit();
+    setDirection(1);
+    setStep((current) => Math.min(current + 1, STEPS.length - 1));
   };
 
   const canProceed = step === 0 ? isStep1Valid : true;
@@ -239,12 +299,21 @@ export default function OnboardingPage() {
                   setFormData={setFormData}
                 />
               )}
-              {step === 2 && (
-                <LifestyleStep
-                  formData={formData}
-                  setFormData={setFormData}
-                />
-              )}
+            {step === 2 && (
+              <LifestyleStep
+                formData={formData}
+                setFormData={setFormData}
+              />
+            )}
+            {step === 3 && (
+              <PersonalStep
+                formData={formData}
+                setFormData={setFormData}
+                personalOptions={personalOptions}
+                amenityOptions={amenityOptions}
+                recommendedPersonal={recommendedPersonal}
+              />
+            )}
             </motion.div>
           </AnimatePresence>
 
@@ -528,6 +597,102 @@ function LifestyleStep({ formData, setFormData }: FormStepProps) {
   );
 }
 
+// ——— Step 4: Estilo Pessoal + Comodidades ———
+
+function PersonalStep({
+  formData,
+  setFormData,
+  personalOptions,
+  amenityOptions,
+  recommendedPersonal,
+}: PersonalStepProps) {
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="text-nin-600 text-sm">
+          Escolha o que realmente importa no seu dia a dia.
+        </p>
+      </div>
+
+      <div className="p-4 rounded-nin-sm border border-nin-200 bg-nin-50">
+        <p className="text-sm font-semibold text-nin-700 mb-2">
+          Recomendado para você
+        </p>
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-nin-900 font-medium">
+            {personalOptions.find((o) => o.key === recommendedPersonal)?.label}
+          </span>
+          <button
+            type="button"
+            className="btn btn-secondary px-3"
+            onClick={() =>
+              setFormData((prev) => ({
+                ...prev,
+                [recommendedPersonal]: true,
+              }))
+            }
+          >
+            Usar recomendação
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {personalOptions.map(({ key, label }) => (
+          <label
+            key={key}
+            className={`flex items-center gap-2 p-3 rounded-nin-sm border-2 cursor-pointer ${
+              formData[key] ? 'border-nin-500 bg-nin-50' : 'border-nin-200'
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={formData[key]}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  [key]: e.target.checked,
+                }))
+              }
+              className="sr-only"
+            />
+            {label}
+          </label>
+        ))}
+      </div>
+
+      <div>
+        <h3 className="font-heading text-lg font-semibold text-nin-900 mb-3">
+          Comodidades desejadas
+        </h3>
+        <div className="grid grid-cols-2 gap-3">
+          {amenityOptions.map(({ key, label }) => (
+            <label
+              key={key}
+              className={`flex items-center gap-2 p-3 rounded-nin-sm border-2 cursor-pointer ${
+                formData[key] ? 'border-nin-500 bg-nin-50' : 'border-nin-200'
+              }`}
+            >
+              <input
+                type="checkbox"
+                checked={formData[key]}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    [key]: e.target.checked,
+                  }))
+                }
+                className="sr-only"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ——— Types ———
 
 interface FormData {
@@ -546,6 +711,18 @@ interface FormData {
   commerceProximityWeight: number;
   safetyWeight: number;
   publicTransportWeight: number;
+  prefersFamilyRhythm: boolean;
+  prefersQuietRestful: boolean;
+  prefersConvenience: boolean;
+  prefersWorkFromHome: boolean;
+  prefersOutdoorLife: boolean;
+  needsParking: boolean;
+  needsGarden: boolean;
+  needsPool: boolean;
+  needsSecurity: boolean;
+  needsGym: boolean;
+  needsPlayground: boolean;
+  needsGreenArea: boolean;
 }
 
 interface FormStepProps {
@@ -555,4 +732,33 @@ interface FormStepProps {
 
 interface EssentialsStepProps extends FormStepProps {
   cities: City[];
+}
+
+interface PersonalStepProps extends FormStepProps {
+  personalOptions: readonly {
+    key:
+      | 'prefersFamilyRhythm'
+      | 'prefersQuietRestful'
+      | 'prefersConvenience'
+      | 'prefersWorkFromHome'
+      | 'prefersOutdoorLife';
+    label: string;
+  }[];
+  amenityOptions: readonly {
+    key:
+      | 'needsParking'
+      | 'needsGarden'
+      | 'needsPool'
+      | 'needsSecurity'
+      | 'needsGym'
+      | 'needsPlayground'
+      | 'needsGreenArea';
+    label: string;
+  }[];
+  recommendedPersonal:
+    | 'prefersFamilyRhythm'
+    | 'prefersQuietRestful'
+    | 'prefersConvenience'
+    | 'prefersWorkFromHome'
+    | 'prefersOutdoorLife';
 }

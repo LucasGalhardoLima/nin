@@ -26,7 +26,8 @@ import {
   LogOut,
   Loader2,
   ChevronDown,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Sparkles
 } from 'lucide-react';
 
 import { api, PropertyMatch, User, PaginatedResponse } from '@/lib/api';
@@ -35,8 +36,17 @@ import { api, PropertyMatch, User, PaginatedResponse } from '@/lib/api';
 const fetchUser = (): Promise<User | null> => api.me().catch(() => null);
 const fetchNeighborhoods = (cityId: string | null) => cityId ? api.getNeighborhoods(cityId) : Promise.resolve([]);
 
-const fetchMatches = ({ sortBy, sortOrder, neighborhoodId, minScore }: { sortBy: string; sortOrder: string; neighborhoodId: string | null; minScore: number }): Promise<PaginatedResponse<PropertyMatch>> => {
-  const token = api.getToken();
+const fetchMatches = async ({
+  sortBy,
+  sortOrder,
+  neighborhoodId,
+  minScore,
+}: {
+  sortBy: string;
+  sortOrder: string;
+  neighborhoodId: string | null;
+  minScore: number;
+}): Promise<PaginatedResponse<PropertyMatch>> => {
   const params = {
     limit: 50,
     sortBy: sortBy as 'score' | 'price' | 'date',
@@ -45,14 +55,19 @@ const fetchMatches = ({ sortBy, sortOrder, neighborhoodId, minScore }: { sortBy:
     minScore,
   };
 
-  if (token) {
-    return api.getMatches(params);
+  if (api.getToken()) {
+    try {
+      return await api.getMatches(params);
+    } catch {
+      // Silent fallback to guest matches when token is stale or user is missing.
+    }
   }
+
   const guestPrefs = api.getGuestPreferences();
   if (guestPrefs) {
     return api.getGuestMatches(guestPrefs, params);
   }
-  return Promise.resolve({ data: [], total: 0, page: 1, limit: 50, totalPages: 0 });
+  return { data: [], total: 0, page: 1, limit: 50, totalPages: 0 };
 };
 
 // Hoisted price formatter for performance
@@ -84,8 +99,8 @@ const formatRelativeDate = (value?: string | null): string => {
 };
 
 // Grid configuration for virtualization
-const CARD_HEIGHT = 680; // Adjusted to accommodate new filters/badges and action row
-const GAP = 24; // Gap between cards (gap-6 = 1.5rem = 24px)
+const CARD_HEIGHT = 760; // Adjusted to accommodate new filters/badges and action row
+const GAP = 40; // Extra breathing room between rows
 
 const defaultAmenityFilters = {
   parking: false,
@@ -155,6 +170,41 @@ export default function DashboardPage() {
     });
   }, [matches, minScore, amenityFilters]);
 
+  const recommendedMatchId = useMemo(() => {
+    if (filteredMatches.length === 0) return null;
+
+    const scoreRecommended = (match: PropertyMatch) => {
+      const base = match.matchScore ?? 0;
+      const tagsBonus = (match.personalTags?.length ?? 0) * 2;
+      const withinBudgetBonus =
+        maxPrice !== null && match.property.price <= maxPrice ? 4 : 0;
+      const lifestyleBonus = match.scoreBreakdown.lifestyle >= 70 ? 3 : 0;
+      return base + tagsBonus + withinBudgetBonus + lifestyleBonus;
+    };
+
+    let best = filteredMatches[0];
+    let bestScore = scoreRecommended(best);
+
+    for (let i = 1; i < filteredMatches.length; i += 1) {
+      const candidate = filteredMatches[i];
+      const score = scoreRecommended(candidate);
+      if (score > bestScore) {
+        best = candidate;
+        bestScore = score;
+      }
+    }
+
+    return best.property.id;
+  }, [filteredMatches, maxPrice]);
+
+  const orderedMatches = useMemo(() => {
+    if (!recommendedMatchId) return filteredMatches;
+    const index = filteredMatches.findIndex((m) => m.property.id === recommendedMatchId);
+    if (index <= 0) return filteredMatches;
+    const recommended = filteredMatches[index];
+    return [recommended, ...filteredMatches.slice(0, index), ...filteredMatches.slice(index + 1)];
+  }, [filteredMatches, recommendedMatchId]);
+
   const totalMatches = matches.length;
   const visibleMatches = filteredMatches.length;
   const isLoading = hasMounted && !user && !userError && api.getToken() !== null;
@@ -170,7 +220,7 @@ export default function DashboardPage() {
   };
 
   const columnCount = hasMounted ? getColumnCount() : 3;
-  const rowCount = Math.ceil(filteredMatches.length / columnCount);
+  const rowCount = Math.ceil(orderedMatches.length / columnCount);
 
   // Virtualize rows (each row contains 1-3 cards depending on screen size)
   const rowVirtualizer = useVirtualizer({
@@ -458,7 +508,7 @@ export default function DashboardPage() {
               >
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                   const startIndex = virtualRow.index * columnCount;
-                  const rowMatches = filteredMatches.slice(startIndex, startIndex + columnCount);
+                  const rowMatches = orderedMatches.slice(startIndex, startIndex + columnCount);
 
                   return (
                     <div
@@ -470,6 +520,7 @@ export default function DashboardPage() {
                         width: '100%',
                         height: `${virtualRow.size}px`,
                         transform: `translateY(${virtualRow.start}px)`,
+                        paddingBottom: `${GAP}px`,
                       }}
                     >
                       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
@@ -481,6 +532,7 @@ export default function DashboardPage() {
                             onHide={handleHide}
                             loading={actionLoading === match.property.id}
                             maxPrice={maxPrice}
+                            isRecommended={match.property.id === recommendedMatchId}
                           />
                         ))}
                       </div>
@@ -503,12 +555,14 @@ const PropertyCard = memo(function PropertyCard({
   onHide,
   loading,
   maxPrice,
+  isRecommended,
 }: {
   match: PropertyMatch;
   onSave: (propertyId: string) => void;
   onHide: (propertyId: string) => void;
   loading: boolean;
   maxPrice: number | null;
+  isRecommended: boolean;
 }) {
   const { property, matchScore, scoreBreakdown, isFavorite } = match;
   const isOverBudget =
@@ -524,9 +578,13 @@ const PropertyCard = memo(function PropertyCard({
   };
 
   return (
-    <div className="group glass-card rounded-nin overflow-hidden hover:-translate-y-1">
-      {/* Image */}
-      <div className="relative h-56 bg-nin-100 overflow-hidden">
+    <div className="group glass-card rounded-nin overflow-hidden hover:-translate-y-1 relative">
+      {isRecommended && (
+        <div className="pointer-events-none absolute -inset-4 rounded-nin bg-gradient-to-r from-nin-200/70 via-nin-100/40 to-nin-200/70 blur-2xl opacity-90" />
+      )}
+      <div className="relative z-10">
+        {/* Image */}
+        <div className="relative h-56 bg-nin-100 overflow-hidden">
         {property.images[0] ? (
           <Image
             src={property.images[0].url}
@@ -564,6 +622,18 @@ const PropertyCard = memo(function PropertyCard({
           <span className="px-2 py-0.5 rounded-full bg-white border border-nin-100">
             {formatRelativeDate(property.lastScrapedAt || property.createdAt || null)}
           </span>
+          {isRecommended && (
+            <span className="relative group/rec px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold shadow-lg shadow-amber-300/40 ring-1 ring-white/30">
+              <span className="inline-flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" />
+                Recomendado
+              </span>
+              <span className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-2 py-1 bg-nin-900 text-white text-[10px] rounded opacity-0 invisible group-hover/rec:opacity-100 group-hover/rec:visible transition-all whitespace-nowrap z-50 shadow-xl">
+                Melhor encaixe considerando suas preferências
+                <span className="absolute bottom-full left-1/2 -translate-x-1/2 border-4 border-transparent border-b-nin-900" />
+              </span>
+            </span>
+          )}
         </div>
 
         <div className="flex items-center justify-between mb-4">
@@ -702,14 +772,21 @@ const PropertyCard = memo(function PropertyCard({
             <ExternalLink className="w-4 h-4" />
           </a>
         </div>
-        <button
-          onClick={() => onHide(property.id)}
-          disabled={loading}
-          className="btn btn-secondary w-full mt-2"
-        >
-          <EyeOff className="w-4 h-4 mr-2" />
-          Não é para mim
-        </button>
+          <button
+            onClick={() => onHide(property.id)}
+            disabled={loading}
+            className="btn btn-secondary w-full mt-2"
+          >
+            <EyeOff className="w-4 h-4 mr-2" />
+            Não é para mim
+          </button>
+          <Link
+            href={`/imovel/${property.id}`}
+            className="btn btn-primary w-full mt-2"
+          >
+            Ver detalhes
+          </Link>
+        </div>
       </div>
     </div>
   );
