@@ -231,6 +231,9 @@ export class ScraperService {
         hasGarden: data.hasGarden ?? existing.hasGarden,
         hasSecurity: data.hasSecurity ?? existing.hasSecurity,
         petFriendly: data.petFriendly ?? existing.petFriendly,
+        hasGym: data.hasGym ?? existing.hasGym,
+        hasPlayground: data.hasPlayground ?? existing.hasPlayground,
+        hasGreenArea: data.hasGreenArea ?? existing.hasGreenArea,
         isActive: true,
         lastScrapedAt: new Date(),
         lastSeenAt: new Date(),
@@ -295,6 +298,9 @@ export class ScraperService {
           hasGarden: data.hasGarden,
           hasSecurity: data.hasSecurity,
           petFriendly: data.petFriendly,
+          hasGym: data.hasGym,
+          hasPlayground: data.hasPlayground,
+          hasGreenArea: data.hasGreenArea,
           images: {
             create: (data.images || []).map((url, index) => ({
               url,

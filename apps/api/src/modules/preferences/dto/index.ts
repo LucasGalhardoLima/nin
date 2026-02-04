@@ -138,6 +138,48 @@ export class UpdateAmenitiesDto {
   @IsOptional()
   @IsBoolean()
   needsSecurity?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  needsGym?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  needsPlayground?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  needsGreenArea?: boolean;
+}
+
+export class UpdatePersonalDto {
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  prefersFamilyRhythm?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  prefersQuietRestful?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  prefersConvenience?: boolean;
+
+  @ApiPropertyOptional({ example: true })
+  @IsOptional()
+  @IsBoolean()
+  prefersWorkFromHome?: boolean;
+
+  @ApiPropertyOptional({ example: false })
+  @IsOptional()
+  @IsBoolean()
+  prefersOutdoorLife?: boolean;
 }
 
 export class UpdatePreferencesDto {
@@ -165,4 +207,9 @@ export class UpdatePreferencesDto {
   @IsOptional()
   @Type(() => UpdateAmenitiesDto)
   amenities?: UpdateAmenitiesDto;
+
+  @ApiPropertyOptional({ type: UpdatePersonalDto })
+  @IsOptional()
+  @Type(() => UpdatePersonalDto)
+  personal?: UpdatePersonalDto;
 }

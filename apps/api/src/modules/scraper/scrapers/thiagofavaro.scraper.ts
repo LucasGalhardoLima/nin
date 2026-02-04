@@ -116,6 +116,13 @@ export class ThiagoFavaroScraper extends BaseScraper {
       );
       const hasGarden = /jardim|quintal|gramado/i.test(combinedDescription.toLowerCase());
       const hasPool = /piscina/i.test(combinedDescription.toLowerCase());
+      const hasGym = /academia|gin[aá]sio|fitness/i.test(combinedDescription.toLowerCase());
+      const hasPlayground = /playground|parquinho|brinquedoteca/i.test(
+        combinedDescription.toLowerCase()
+      );
+      const hasGreenArea = /parque|bosque|area verde|área verde|jardim|gramado/i.test(
+        combinedDescription.toLowerCase()
+      );
 
       const images = await page.evaluate(() => {
         const og = document.querySelector('meta[property="og:image"]') as HTMLMetaElement | null;
@@ -154,6 +161,9 @@ export class ThiagoFavaroScraper extends BaseScraper {
         hasPool,
         hasGarden,
         hasSecurity,
+        hasGym,
+        hasPlayground,
+        hasGreenArea,
         images,
       };
     } catch (error) {

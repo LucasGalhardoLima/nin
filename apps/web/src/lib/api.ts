@@ -199,6 +199,16 @@ export interface UserPreferences {
     needsGarden: boolean;
     needsPool: boolean;
     needsSecurity: boolean;
+    needsGym: boolean;
+    needsPlayground: boolean;
+    needsGreenArea: boolean;
+  };
+  personal: {
+    prefersFamilyRhythm: boolean;
+    prefersQuietRestful: boolean;
+    prefersConvenience: boolean;
+    prefersWorkFromHome: boolean;
+    prefersOutdoorLife: boolean;
   };
 }
 
@@ -208,6 +218,7 @@ export interface UpdatePreferencesDto {
   location?: Partial<UserPreferences['location']>;
   lifestyle?: Partial<UserPreferences['lifestyle']>;
   amenities?: Partial<UserPreferences['amenities']>;
+  personal?: Partial<UserPreferences['personal']>;
 }
 
 export interface Property {
@@ -230,6 +241,9 @@ export interface Property {
   hasPool: boolean;
   hasSecurity: boolean;
   petFriendly: boolean;
+  hasGym: boolean;
+  hasPlayground: boolean;
+  hasGreenArea: boolean;
   images: { id: string; url: string; isPrimary: boolean }[];
   sourceUrl: string;
   sourceName: string;
@@ -248,6 +262,7 @@ export interface PropertyMatch {
     lifestyle: number;
     amenities: number;
   };
+  personalTags?: string[];
   isFavorite: boolean;
   isHidden: boolean;
 }

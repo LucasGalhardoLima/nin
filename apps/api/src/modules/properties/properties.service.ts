@@ -119,6 +119,9 @@ export class PropertiesService {
       hasPool: property.hasPool,
       hasSecurity: property.hasSecurity,
       petFriendly: property.petFriendly,
+      hasGym: property.hasGym,
+      hasPlayground: property.hasPlayground,
+      hasGreenArea: property.hasGreenArea,
       images: property.images.map((img) => ({
         id: img.id,
         url: img.url,

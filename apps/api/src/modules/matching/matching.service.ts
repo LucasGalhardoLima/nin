@@ -54,6 +54,8 @@ export class MatchingService {
       ...preferencesDto.family,
       ...preferencesDto.budget,
       ...preferencesDto.lifestyle,
+      ...preferencesDto.amenities,
+      ...preferencesDto.personal,
     };
 
     return this.calculateMatchesWithPreferences(preferences, dto);
@@ -128,6 +130,7 @@ export class MatchingService {
         if (saved?.isHidden) return null;
 
         const scoreBreakdown = this.calculateScore(property, preferences, pois);
+        const personalModes = this.calculatePersonalModeBoost(property, preferences, pois);
         const totalScore =
           scoreBreakdown.budget * (WEIGHTS.budget / 100) +
           scoreBreakdown.space * (WEIGHTS.space / 100) +
@@ -138,12 +141,16 @@ export class MatchingService {
           property.lastScrapedAt ?? property.createdAt,
         );
         const synergyBoost = this.calculateSynergyBoost(scoreBreakdown);
-        const finalScore = Math.min(100, totalScore + recencyBoost + synergyBoost);
+        const finalScore = Math.min(
+          100,
+          totalScore + recencyBoost + synergyBoost + personalModes.boost,
+        );
 
         return {
           property: this.propertiesService.toResponse(property),
           matchScore: Math.round(finalScore * 10) / 10,
           scoreBreakdown,
+          personalTags: personalModes.tags,
           isFavorite: saved?.isFavorite ?? false,
           isHidden: false,
         };
@@ -340,6 +347,9 @@ export class MatchingService {
       neighborhoodId: string | null;
       neighborhood?: { quietnessScore: number; safetyScore: number } | null;
       description?: string | null;
+      hasGym?: boolean;
+      hasPlayground?: boolean;
+      hasGreenArea?: boolean;
     },
     preferences: {
       quietnessWeight: number;
@@ -360,7 +370,11 @@ export class MatchingService {
 
     const hasGeo = property.latitude !== null && property.longitude !== null;
     const hasNeighborhood = !!property.neighborhood;
-    const textSignals = this.extractLifestyleSignals(property.description ?? '');
+    const textSignals = this.extractLifestyleSignals(property.description ?? '', {
+      hasGym: property.hasGym ?? false,
+      hasPlayground: property.hasPlayground ?? false,
+      hasGreenArea: property.hasGreenArea ?? false,
+    });
     const hasTextSignals = Object.values(textSignals).some(Boolean);
 
     const geoWeightTotal = Object.values(poiWeights).reduce((a, b) => a + b, 0);
@@ -439,24 +453,272 @@ export class MatchingService {
     return Math.min(100, weightedScore);
   }
 
-  private extractLifestyleSignals(description: string): {
+  private extractLifestyleSignals(
+    description: string,
+    amenities?: { hasGym: boolean; hasPlayground: boolean; hasGreenArea: boolean },
+  ): {
     SCHOOL: boolean;
     HOSPITAL: boolean;
     SUPERMARKET: boolean;
     BUS_STOP: boolean;
   } {
     const text = description.toLowerCase();
+    const hasNearbyLeisure =
+      amenities?.hasGym || amenities?.hasPlayground || amenities?.hasGreenArea || false;
     return {
       SCHOOL: /escola|col[eé]gio|creche|universidade/.test(text),
       HOSPITAL: /hospital|cl[ií]nica|upa|posto de sa[úu]de|pronto socorro/.test(text),
       SUPERMARKET:
         /supermercado|mercado|mercearia|farm[aá]cia|padaria|shopping|restaurante/.test(
           text,
-        ),
+        ) || hasNearbyLeisure,
       BUS_STOP: /ponto de [oô]nibus|ônibus|terminal|transporte p[uú]blico|metr[oô]|trem/.test(
         text,
       ),
     };
+  }
+
+  private extractPersonalKeywordSignals(description: string): {
+    quiet: boolean;
+    busy: boolean;
+    workFromHome: boolean;
+    bright: boolean;
+    outdoor: boolean;
+  } {
+    const text = description.toLowerCase();
+    return {
+      quiet: /tranquil|silenc|sosseg|calm|rua tranquila|sem barulho/.test(text),
+      busy: /avenida|movimentad|centro|comercial|barulho|tr[aâ]nsito/.test(text),
+      workFromHome: /home office|escrit[oó]rio|workspace|co[- ]?working/.test(text),
+      bright: /bem iluminad|sol da manh[aã]|sol da tarde|ventilad/.test(text),
+      outdoor: /quintal|jardim|gramado|varanda|sacada|terra[cç]o|[áa]rea externa|churrasqueira|bosque|parque|verde/.test(
+        text,
+      ),
+    };
+  }
+
+  private calculatePersonalModeBoost(
+    property: {
+      bedrooms: number;
+      bathrooms: number;
+      area: number | null;
+      neighborhood?: { quietnessScore: number; safetyScore: number } | null;
+      description?: string | null;
+      hasSecurity?: boolean;
+      hasGarden?: boolean;
+      hasPool?: boolean;
+      hasGym?: boolean;
+      hasPlayground?: boolean;
+      hasGreenArea?: boolean;
+    },
+    preferences: {
+      minBedrooms: number;
+      minBathrooms: number;
+      prefersFamilyRhythm?: boolean;
+      prefersQuietRestful?: boolean;
+      prefersConvenience?: boolean;
+      prefersWorkFromHome?: boolean;
+      prefersOutdoorLife?: boolean;
+    },
+    pois: Array<{ type: string; latitude: number; longitude: number }>,
+  ): { boost: number; tags: string[] } {
+    const selectedModes = {
+      family: preferences.prefersFamilyRhythm ?? false,
+      quiet: preferences.prefersQuietRestful ?? false,
+      convenience: preferences.prefersConvenience ?? false,
+      workFromHome: preferences.prefersWorkFromHome ?? false,
+      outdoor: preferences.prefersOutdoorLife ?? false,
+    };
+
+    if (!Object.values(selectedModes).some(Boolean)) {
+      return { boost: 0, tags: [] };
+    }
+
+    const description = property.description ?? '';
+    const lifestyleSignals = this.extractLifestyleSignals(description, {
+      hasGym: property.hasGym ?? false,
+      hasPlayground: property.hasPlayground ?? false,
+      hasGreenArea: property.hasGreenArea ?? false,
+    });
+    const keywordSignals = this.extractPersonalKeywordSignals(description);
+
+    const scores = {
+      family: this.scoreFamilyRhythm(property, preferences, lifestyleSignals, keywordSignals),
+      quiet: this.scoreQuietRestful(property, keywordSignals),
+      convenience: this.scoreConvenience(lifestyleSignals),
+      workFromHome: this.scoreWorkFromHome(property, preferences, keywordSignals),
+      outdoor: this.scoreOutdoorLife(property, keywordSignals),
+    };
+
+    const tags: string[] = [];
+    let boost = 0;
+
+    const evidence = {
+      family:
+        property.bedrooms > 0 ||
+        property.bathrooms > 0 ||
+        property.hasPlayground ||
+        property.hasGreenArea ||
+        property.hasGarden ||
+        property.hasSecurity ||
+        lifestyleSignals.SCHOOL,
+      quiet: !!property.neighborhood || keywordSignals.quiet || keywordSignals.busy,
+      convenience:
+        lifestyleSignals.SUPERMARKET ||
+        lifestyleSignals.BUS_STOP ||
+        lifestyleSignals.HOSPITAL ||
+        lifestyleSignals.SCHOOL,
+      workFromHome:
+        property.area !== null ||
+        property.bedrooms > 0 ||
+        keywordSignals.workFromHome ||
+        keywordSignals.bright,
+      outdoor:
+        property.hasGarden ||
+        property.hasGreenArea ||
+        property.hasPool ||
+        property.hasPlayground ||
+        keywordSignals.outdoor,
+    };
+
+    const addBoost = (score: number, hasEvidence: boolean) => {
+      if (score >= 80) return 4;
+      if (score >= 65) return 2;
+      if (!hasEvidence) return 0;
+      if (score < 40) return -3;
+      return 0;
+    };
+
+    if (selectedModes.family) {
+      boost += addBoost(scores.family, evidence.family);
+      if (scores.family >= 70) tags.push('Ritmo de família');
+    }
+    if (selectedModes.quiet) {
+      boost += addBoost(scores.quiet, evidence.quiet);
+      if (scores.quiet >= 70) tags.push('Quieto e tranquilo');
+    }
+    if (selectedModes.convenience) {
+      boost += addBoost(scores.convenience, evidence.convenience);
+      if (scores.convenience >= 70) tags.push('Conveniência no dia a dia');
+    }
+    if (selectedModes.workFromHome) {
+      boost += addBoost(scores.workFromHome, evidence.workFromHome);
+      if (scores.workFromHome >= 70) tags.push('Home office confortável');
+    }
+    if (selectedModes.outdoor) {
+      boost += addBoost(scores.outdoor, evidence.outdoor);
+      if (scores.outdoor >= 70) tags.push('Vida ao ar livre');
+    }
+
+    if (boost > 10) boost = 10;
+    if (boost < -8) boost = -8;
+
+    return { boost, tags };
+  }
+
+  private scoreFamilyRhythm(
+    property: {
+      bedrooms: number;
+      bathrooms: number;
+      neighborhood?: { quietnessScore: number; safetyScore: number } | null;
+      hasSecurity?: boolean;
+      hasGarden?: boolean;
+      hasPlayground?: boolean;
+      hasGreenArea?: boolean;
+    },
+    preferences: { minBedrooms: number; minBathrooms: number },
+    lifestyleSignals: { SCHOOL: boolean; HOSPITAL: boolean; SUPERMARKET: boolean; BUS_STOP: boolean },
+    keywordSignals: { quiet: boolean },
+  ): number {
+    const minBedrooms = preferences.minBedrooms ?? 0;
+    const minBathrooms = preferences.minBathrooms ?? 0;
+    let score = 30;
+
+    if (lifestyleSignals.SCHOOL) score += 18;
+    if (property.hasPlayground) score += 18;
+    if (property.hasGreenArea || property.hasGarden) score += 10;
+    if (property.hasSecurity) score += 6;
+    if (property.bedrooms >= Math.max(2, minBedrooms)) score += 8;
+    if (property.bathrooms >= Math.max(1, minBathrooms)) score += 5;
+    if (keywordSignals.quiet) score += 5;
+
+    if (property.neighborhood) {
+      score += Math.max(0, property.neighborhood.safetyScore - 5) * 3;
+      score += Math.max(0, property.neighborhood.quietnessScore - 5) * 2;
+    }
+
+    return Math.min(100, Math.max(0, score));
+  }
+
+  private scoreQuietRestful(
+    property: { neighborhood?: { quietnessScore: number } | null; hasSecurity?: boolean },
+    keywordSignals: { quiet: boolean; busy: boolean },
+  ): number {
+    let score = 25;
+
+    if (property.neighborhood) {
+      score += property.neighborhood.quietnessScore * 5;
+    }
+    if (keywordSignals.quiet) score += 15;
+    if (keywordSignals.busy) score -= 20;
+    if (property.hasSecurity) score += 5;
+
+    return Math.min(100, Math.max(0, score));
+  }
+
+  private scoreConvenience(lifestyleSignals: {
+    SCHOOL: boolean;
+    HOSPITAL: boolean;
+    SUPERMARKET: boolean;
+    BUS_STOP: boolean;
+  }): number {
+    let score = 25;
+    if (lifestyleSignals.SUPERMARKET) score += 30;
+    if (lifestyleSignals.HOSPITAL) score += 15;
+    if (lifestyleSignals.SCHOOL) score += 10;
+    if (lifestyleSignals.BUS_STOP) score += 10;
+    return Math.min(100, Math.max(0, score));
+  }
+
+  private scoreWorkFromHome(
+    property: { bedrooms: number; area: number | null; neighborhood?: { quietnessScore: number } | null },
+    preferences: { minBedrooms: number },
+    keywordSignals: { workFromHome: boolean; bright: boolean; quiet: boolean },
+  ): number {
+    const minBedrooms = preferences.minBedrooms ?? 0;
+    let score = 25;
+
+    if (keywordSignals.workFromHome) score += 20;
+    if (property.bedrooms >= minBedrooms + 1) score += 15;
+    if (property.area && property.area >= 100) score += 15;
+    else if (property.area && property.area >= 80) score += 10;
+    else if (property.area && property.area >= 60) score += 5;
+
+    if (property.neighborhood && property.neighborhood.quietnessScore >= 7) score += 10;
+    if (keywordSignals.bright) score += 5;
+    if (keywordSignals.quiet) score += 5;
+
+    return Math.min(100, Math.max(0, score));
+  }
+
+  private scoreOutdoorLife(
+    property: {
+      hasGarden?: boolean;
+      hasGreenArea?: boolean;
+      hasPool?: boolean;
+      hasPlayground?: boolean;
+    },
+    keywordSignals: { outdoor: boolean },
+  ): number {
+    let score = 20;
+
+    if (property.hasGarden) score += 20;
+    if (property.hasGreenArea) score += 20;
+    if (property.hasPool) score += 10;
+    if (property.hasPlayground) score += 8;
+    if (keywordSignals.outdoor) score += 15;
+
+    return Math.min(100, Math.max(0, score));
   }
 
   private calculateRecencyBoost(date: Date | null | undefined): number {
@@ -495,6 +757,9 @@ export class MatchingService {
       hasSecurity: boolean;
       petFriendly: boolean;
       description?: string | null;
+      hasGym?: boolean;
+      hasPlayground?: boolean;
+      hasGreenArea?: boolean;
     },
     preferences: {
       needsParking: boolean;
@@ -502,6 +767,9 @@ export class MatchingService {
       needsPool: boolean;
       needsSecurity: boolean;
       hasPets: boolean;
+      needsGym?: boolean;
+      needsPlayground?: boolean;
+      needsGreenArea?: boolean;
     },
   ): number {
     let requiredCount = 0;
@@ -522,6 +790,9 @@ export class MatchingService {
         partial: hasSecurityMention,
       },
       { needed: preferences.hasPets, has: property.petFriendly },
+      { needed: preferences.needsGym ?? false, has: property.hasGym ?? false },
+      { needed: preferences.needsPlayground ?? false, has: property.hasPlayground ?? false },
+      { needed: preferences.needsGreenArea ?? false, has: property.hasGreenArea ?? false },
     ];
 
     for (const check of checks) {

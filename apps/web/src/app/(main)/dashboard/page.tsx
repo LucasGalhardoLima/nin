@@ -16,6 +16,8 @@ import {
   Bath,
   Car,
   Trees,
+  Dumbbell,
+  Landmark,
   Shield,
   PawPrint,
   AlertTriangle,
@@ -91,6 +93,9 @@ const defaultAmenityFilters = {
   pool: false,
   security: false,
   petFriendly: false,
+  gym: false,
+  playground: false,
+  greenArea: false,
 };
 
 export default function DashboardPage() {
@@ -143,6 +148,9 @@ export default function DashboardPage() {
       if (amenityFilters.pool && !match.property.hasPool) return false;
       if (amenityFilters.security && !match.property.hasSecurity) return false;
       if (amenityFilters.petFriendly && !match.property.petFriendly) return false;
+      if (amenityFilters.gym && !match.property.hasGym) return false;
+      if (amenityFilters.playground && !match.property.hasPlayground) return false;
+      if (amenityFilters.greenArea && !match.property.hasGreenArea) return false;
       return true;
     });
   }, [matches, minScore, amenityFilters]);
@@ -360,6 +368,9 @@ export default function DashboardPage() {
                 { key: 'pool', label: 'Piscina', icon: Heart },
                 { key: 'security', label: 'Segurança', icon: Shield },
                 { key: 'petFriendly', label: 'Pet friendly', icon: PawPrint },
+                { key: 'gym', label: 'Academia', icon: Dumbbell },
+                { key: 'playground', label: 'Playground', icon: Landmark },
+                { key: 'greenArea', label: 'Área verde', icon: Trees },
               ].map(({ key, label, icon: Icon }) => {
                 const active = amenityFilters[key as keyof typeof amenityFilters];
                 return (
@@ -602,6 +613,21 @@ const PropertyCard = memo(function PropertyCard({
               <Shield className="w-4 h-4" />
             </span>
           )}
+          {property.hasGym && (
+            <span className="flex items-center gap-1">
+              <Dumbbell className="w-4 h-4" />
+            </span>
+          )}
+          {property.hasPlayground && (
+            <span className="flex items-center gap-1">
+              <Landmark className="w-4 h-4" />
+            </span>
+          )}
+          {property.hasGreenArea && (
+            <span className="flex items-center gap-1">
+              <Trees className="w-4 h-4" />
+            </span>
+          )}
         </div>
 
         <div className="text-xs text-nin-500 font-semibold mb-2">
@@ -642,6 +668,18 @@ const PropertyCard = memo(function PropertyCard({
             );
           })}
         </div>
+        {match.personalTags && match.personalTags.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {match.personalTags.map((tag) => (
+              <span
+                key={tag}
+                className="text-[11px] px-2 py-1 rounded-full bg-nin-50 text-nin-700 border border-nin-100"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
 
         {/* Actions */}
         <div className="grid grid-cols-3 gap-2">

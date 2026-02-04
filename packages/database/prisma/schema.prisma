@@ -57,6 +57,16 @@ model UserPreferences {
   needsGarden   Boolean @default(false)
   needsPool     Boolean @default(false)
   needsSecurity Boolean @default(false)
+  needsGym      Boolean @default(false)
+  needsPlayground Boolean @default(false)
+  needsGreenArea Boolean @default(false)
+
+  // Personal modes
+  prefersFamilyRhythm Boolean @default(false)
+  prefersQuietRestful Boolean @default(false)
+  prefersConvenience  Boolean @default(false)
+  prefersWorkFromHome Boolean @default(false)
+  prefersOutdoorLife  Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -147,6 +157,9 @@ model Property {
   hasPool        Boolean @default(false)
   hasSecurity    Boolean @default(false)
   petFriendly    Boolean @default(false)
+  hasGym         Boolean @default(false)
+  hasPlayground  Boolean @default(false)
+  hasGreenArea   Boolean @default(false)
 
   // Scraping metadata
   sourceId       String?  // ID único do imóvel no site de origem

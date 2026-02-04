@@ -59,6 +59,7 @@ export default function PreferencesPage() {
         location: preferences.location,
         lifestyle: preferences.lifestyle,
         amenities: preferences.amenities,
+        personal: preferences.personal,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -344,6 +345,9 @@ export default function PreferencesPage() {
                 { key: 'needsGarden', label: 'Jardim' },
                 { key: 'needsPool', label: 'Piscina' },
                 { key: 'needsSecurity', label: 'Segurança 24h' },
+                { key: 'needsGym', label: 'Academia' },
+                { key: 'needsPlayground', label: 'Playground' },
+                { key: 'needsGreenArea', label: 'Área verde' },
               ].map(({ key, label }) => (
                 <label
                   key={key}
@@ -356,6 +360,41 @@ export default function PreferencesPage() {
                     type="checkbox"
                     checked={preferences.amenities[key as keyof typeof preferences.amenities]}
                     onChange={(e) => updatePrefs('amenities', key, e.target.checked)}
+                    className="sr-only"
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </section>
+
+          {/* Personal Modes */}
+          <section className="card">
+            <h2 className="font-heading text-lg font-semibold text-nin-900 mb-1">
+              Estilo pessoal
+            </h2>
+            <p className="text-sm text-nin-500 mb-4">
+              Escolha o que realmente importa no seu dia a dia.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { key: 'prefersFamilyRhythm', label: 'Ritmo de família' },
+                { key: 'prefersQuietRestful', label: 'Quieto e tranquilo' },
+                { key: 'prefersConvenience', label: 'Conveniência diária' },
+                { key: 'prefersWorkFromHome', label: 'Home office' },
+                { key: 'prefersOutdoorLife', label: 'Vida ao ar livre' },
+              ].map(({ key, label }) => (
+                <label
+                  key={key}
+                  className={`flex items-center gap-2 p-3 rounded-nin-sm border-2 cursor-pointer ${preferences.personal[key as keyof typeof preferences.personal]
+                      ? 'border-nin-500 bg-nin-50'
+                      : 'border-nin-200'
+                    }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={preferences.personal[key as keyof typeof preferences.personal]}
+                    onChange={(e) => updatePrefs('personal', key, e.target.checked)}
                     className="sr-only"
                   />
                   {label}

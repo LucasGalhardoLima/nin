@@ -56,6 +56,17 @@ export class PreferencesService {
         needsGarden: dto.amenities.needsGarden,
         needsPool: dto.amenities.needsPool,
         needsSecurity: dto.amenities.needsSecurity,
+        needsGym: dto.amenities.needsGym,
+        needsPlayground: dto.amenities.needsPlayground,
+        needsGreenArea: dto.amenities.needsGreenArea,
+      }),
+      // Personal modes
+      ...(dto.personal && {
+        prefersFamilyRhythm: dto.personal.prefersFamilyRhythm,
+        prefersQuietRestful: dto.personal.prefersQuietRestful,
+        prefersConvenience: dto.personal.prefersConvenience,
+        prefersWorkFromHome: dto.personal.prefersWorkFromHome,
+        prefersOutdoorLife: dto.personal.prefersOutdoorLife,
       }),
     };
 
@@ -157,6 +168,16 @@ export class PreferencesService {
         needsGarden: preferences.needsGarden,
         needsPool: preferences.needsPool,
         needsSecurity: preferences.needsSecurity,
+        needsGym: preferences.needsGym,
+        needsPlayground: preferences.needsPlayground,
+        needsGreenArea: preferences.needsGreenArea,
+      },
+      personal: {
+        prefersFamilyRhythm: preferences.prefersFamilyRhythm,
+        prefersQuietRestful: preferences.prefersQuietRestful,
+        prefersConvenience: preferences.prefersConvenience,
+        prefersWorkFromHome: preferences.prefersWorkFromHome,
+        prefersOutdoorLife: preferences.prefersOutdoorLife,
       },
     };
   }

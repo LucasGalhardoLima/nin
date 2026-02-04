@@ -2859,6 +2859,14 @@ export namespace Prisma {
     needsGarden: boolean | null
     needsPool: boolean | null
     needsSecurity: boolean | null
+    needsGym: boolean | null
+    needsPlayground: boolean | null
+    needsGreenArea: boolean | null
+    prefersFamilyRhythm: boolean | null
+    prefersQuietRestful: boolean | null
+    prefersConvenience: boolean | null
+    prefersWorkFromHome: boolean | null
+    prefersOutdoorLife: boolean | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -2885,6 +2893,14 @@ export namespace Prisma {
     needsGarden: boolean | null
     needsPool: boolean | null
     needsSecurity: boolean | null
+    needsGym: boolean | null
+    needsPlayground: boolean | null
+    needsGreenArea: boolean | null
+    prefersFamilyRhythm: boolean | null
+    prefersQuietRestful: boolean | null
+    prefersConvenience: boolean | null
+    prefersWorkFromHome: boolean | null
+    prefersOutdoorLife: boolean | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -2911,6 +2927,14 @@ export namespace Prisma {
     needsGarden: number
     needsPool: number
     needsSecurity: number
+    needsGym: number
+    needsPlayground: number
+    needsGreenArea: number
+    prefersFamilyRhythm: number
+    prefersQuietRestful: number
+    prefersConvenience: number
+    prefersWorkFromHome: number
+    prefersOutdoorLife: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -2969,6 +2993,14 @@ export namespace Prisma {
     needsGarden?: true
     needsPool?: true
     needsSecurity?: true
+    needsGym?: true
+    needsPlayground?: true
+    needsGreenArea?: true
+    prefersFamilyRhythm?: true
+    prefersQuietRestful?: true
+    prefersConvenience?: true
+    prefersWorkFromHome?: true
+    prefersOutdoorLife?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -2995,6 +3027,14 @@ export namespace Prisma {
     needsGarden?: true
     needsPool?: true
     needsSecurity?: true
+    needsGym?: true
+    needsPlayground?: true
+    needsGreenArea?: true
+    prefersFamilyRhythm?: true
+    prefersQuietRestful?: true
+    prefersConvenience?: true
+    prefersWorkFromHome?: true
+    prefersOutdoorLife?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -3021,6 +3061,14 @@ export namespace Prisma {
     needsGarden?: true
     needsPool?: true
     needsSecurity?: true
+    needsGym?: true
+    needsPlayground?: true
+    needsGreenArea?: true
+    prefersFamilyRhythm?: true
+    prefersQuietRestful?: true
+    prefersConvenience?: true
+    prefersWorkFromHome?: true
+    prefersOutdoorLife?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -3134,6 +3182,14 @@ export namespace Prisma {
     needsGarden: boolean
     needsPool: boolean
     needsSecurity: boolean
+    needsGym: boolean
+    needsPlayground: boolean
+    needsGreenArea: boolean
+    prefersFamilyRhythm: boolean
+    prefersQuietRestful: boolean
+    prefersConvenience: boolean
+    prefersWorkFromHome: boolean
+    prefersOutdoorLife: boolean
     createdAt: Date
     updatedAt: Date
     _count: UserPreferencesCountAggregateOutputType | null
@@ -3179,6 +3235,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -3209,6 +3273,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     user?: boolean | UserDefaultArgs<ExtArgs>
@@ -3237,6 +3309,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
@@ -3281,6 +3361,14 @@ export namespace Prisma {
       needsGarden: boolean
       needsPool: boolean
       needsSecurity: boolean
+      needsGym: boolean
+      needsPlayground: boolean
+      needsGreenArea: boolean
+      prefersFamilyRhythm: boolean
+      prefersQuietRestful: boolean
+      prefersConvenience: boolean
+      prefersWorkFromHome: boolean
+      prefersOutdoorLife: boolean
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["userPreferences"]>
@@ -3700,6 +3788,14 @@ export namespace Prisma {
     readonly needsGarden: FieldRef<"UserPreferences", 'Boolean'>
     readonly needsPool: FieldRef<"UserPreferences", 'Boolean'>
     readonly needsSecurity: FieldRef<"UserPreferences", 'Boolean'>
+    readonly needsGym: FieldRef<"UserPreferences", 'Boolean'>
+    readonly needsPlayground: FieldRef<"UserPreferences", 'Boolean'>
+    readonly needsGreenArea: FieldRef<"UserPreferences", 'Boolean'>
+    readonly prefersFamilyRhythm: FieldRef<"UserPreferences", 'Boolean'>
+    readonly prefersQuietRestful: FieldRef<"UserPreferences", 'Boolean'>
+    readonly prefersConvenience: FieldRef<"UserPreferences", 'Boolean'>
+    readonly prefersWorkFromHome: FieldRef<"UserPreferences", 'Boolean'>
+    readonly prefersOutdoorLife: FieldRef<"UserPreferences", 'Boolean'>
     readonly createdAt: FieldRef<"UserPreferences", 'DateTime'>
     readonly updatedAt: FieldRef<"UserPreferences", 'DateTime'>
   }
@@ -8134,6 +8230,9 @@ export namespace Prisma {
     hasPool: boolean | null
     hasSecurity: boolean | null
     petFriendly: boolean | null
+    hasGym: boolean | null
+    hasPlayground: boolean | null
+    hasGreenArea: boolean | null
     sourceId: string | null
     lastScrapedAt: Date | null
     scrapingSource: string | null
@@ -8165,6 +8264,9 @@ export namespace Prisma {
     hasPool: boolean | null
     hasSecurity: boolean | null
     petFriendly: boolean | null
+    hasGym: boolean | null
+    hasPlayground: boolean | null
+    hasGreenArea: boolean | null
     sourceId: string | null
     lastScrapedAt: Date | null
     scrapingSource: string | null
@@ -8196,6 +8298,9 @@ export namespace Prisma {
     hasPool: number
     hasSecurity: number
     petFriendly: number
+    hasGym: number
+    hasPlayground: number
+    hasGreenArea: number
     sourceId: number
     lastScrapedAt: number
     scrapingSource: number
@@ -8247,6 +8352,9 @@ export namespace Prisma {
     hasPool?: true
     hasSecurity?: true
     petFriendly?: true
+    hasGym?: true
+    hasPlayground?: true
+    hasGreenArea?: true
     sourceId?: true
     lastScrapedAt?: true
     scrapingSource?: true
@@ -8278,6 +8386,9 @@ export namespace Prisma {
     hasPool?: true
     hasSecurity?: true
     petFriendly?: true
+    hasGym?: true
+    hasPlayground?: true
+    hasGreenArea?: true
     sourceId?: true
     lastScrapedAt?: true
     scrapingSource?: true
@@ -8309,6 +8420,9 @@ export namespace Prisma {
     hasPool?: true
     hasSecurity?: true
     petFriendly?: true
+    hasGym?: true
+    hasPlayground?: true
+    hasGreenArea?: true
     sourceId?: true
     lastScrapedAt?: true
     scrapingSource?: true
@@ -8427,6 +8541,9 @@ export namespace Prisma {
     hasPool: boolean
     hasSecurity: boolean
     petFriendly: boolean
+    hasGym: boolean
+    hasPlayground: boolean
+    hasGreenArea: boolean
     sourceId: string | null
     lastScrapedAt: Date | null
     scrapingSource: string | null
@@ -8477,6 +8594,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: boolean
     lastScrapedAt?: boolean
     scrapingSource?: boolean
@@ -8513,6 +8633,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: boolean
     lastScrapedAt?: boolean
     scrapingSource?: boolean
@@ -8546,6 +8669,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: boolean
     lastScrapedAt?: boolean
     scrapingSource?: boolean
@@ -8597,6 +8723,9 @@ export namespace Prisma {
       hasPool: boolean
       hasSecurity: boolean
       petFriendly: boolean
+      hasGym: boolean
+      hasPlayground: boolean
+      hasGreenArea: boolean
       sourceId: string | null
       lastScrapedAt: Date | null
       scrapingSource: string | null
@@ -9022,6 +9151,9 @@ export namespace Prisma {
     readonly hasPool: FieldRef<"Property", 'Boolean'>
     readonly hasSecurity: FieldRef<"Property", 'Boolean'>
     readonly petFriendly: FieldRef<"Property", 'Boolean'>
+    readonly hasGym: FieldRef<"Property", 'Boolean'>
+    readonly hasPlayground: FieldRef<"Property", 'Boolean'>
+    readonly hasGreenArea: FieldRef<"Property", 'Boolean'>
     readonly sourceId: FieldRef<"Property", 'String'>
     readonly lastScrapedAt: FieldRef<"Property", 'DateTime'>
     readonly scrapingSource: FieldRef<"Property", 'String'>
@@ -12398,6 +12530,14 @@ export namespace Prisma {
     needsGarden: 'needsGarden',
     needsPool: 'needsPool',
     needsSecurity: 'needsSecurity',
+    needsGym: 'needsGym',
+    needsPlayground: 'needsPlayground',
+    needsGreenArea: 'needsGreenArea',
+    prefersFamilyRhythm: 'prefersFamilyRhythm',
+    prefersQuietRestful: 'prefersQuietRestful',
+    prefersConvenience: 'prefersConvenience',
+    prefersWorkFromHome: 'prefersWorkFromHome',
+    prefersOutdoorLife: 'prefersOutdoorLife',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -12473,6 +12613,9 @@ export namespace Prisma {
     hasPool: 'hasPool',
     hasSecurity: 'hasSecurity',
     petFriendly: 'petFriendly',
+    hasGym: 'hasGym',
+    hasPlayground: 'hasPlayground',
+    hasGreenArea: 'hasGreenArea',
     sourceId: 'sourceId',
     lastScrapedAt: 'lastScrapedAt',
     scrapingSource: 'scrapingSource',
@@ -12710,6 +12853,14 @@ export namespace Prisma {
     needsGarden?: BoolFilter<"UserPreferences"> | boolean
     needsPool?: BoolFilter<"UserPreferences"> | boolean
     needsSecurity?: BoolFilter<"UserPreferences"> | boolean
+    needsGym?: BoolFilter<"UserPreferences"> | boolean
+    needsPlayground?: BoolFilter<"UserPreferences"> | boolean
+    needsGreenArea?: BoolFilter<"UserPreferences"> | boolean
+    prefersFamilyRhythm?: BoolFilter<"UserPreferences"> | boolean
+    prefersQuietRestful?: BoolFilter<"UserPreferences"> | boolean
+    prefersConvenience?: BoolFilter<"UserPreferences"> | boolean
+    prefersWorkFromHome?: BoolFilter<"UserPreferences"> | boolean
+    prefersOutdoorLife?: BoolFilter<"UserPreferences"> | boolean
     createdAt?: DateTimeFilter<"UserPreferences"> | Date | string
     updatedAt?: DateTimeFilter<"UserPreferences"> | Date | string
     user?: XOR<UserRelationFilter, UserWhereInput>
@@ -12739,6 +12890,14 @@ export namespace Prisma {
     needsGarden?: SortOrder
     needsPool?: SortOrder
     needsSecurity?: SortOrder
+    needsGym?: SortOrder
+    needsPlayground?: SortOrder
+    needsGreenArea?: SortOrder
+    prefersFamilyRhythm?: SortOrder
+    prefersQuietRestful?: SortOrder
+    prefersConvenience?: SortOrder
+    prefersWorkFromHome?: SortOrder
+    prefersOutdoorLife?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     user?: UserOrderByWithRelationInput
@@ -12771,6 +12930,14 @@ export namespace Prisma {
     needsGarden?: BoolFilter<"UserPreferences"> | boolean
     needsPool?: BoolFilter<"UserPreferences"> | boolean
     needsSecurity?: BoolFilter<"UserPreferences"> | boolean
+    needsGym?: BoolFilter<"UserPreferences"> | boolean
+    needsPlayground?: BoolFilter<"UserPreferences"> | boolean
+    needsGreenArea?: BoolFilter<"UserPreferences"> | boolean
+    prefersFamilyRhythm?: BoolFilter<"UserPreferences"> | boolean
+    prefersQuietRestful?: BoolFilter<"UserPreferences"> | boolean
+    prefersConvenience?: BoolFilter<"UserPreferences"> | boolean
+    prefersWorkFromHome?: BoolFilter<"UserPreferences"> | boolean
+    prefersOutdoorLife?: BoolFilter<"UserPreferences"> | boolean
     createdAt?: DateTimeFilter<"UserPreferences"> | Date | string
     updatedAt?: DateTimeFilter<"UserPreferences"> | Date | string
     user?: XOR<UserRelationFilter, UserWhereInput>
@@ -12800,6 +12967,14 @@ export namespace Prisma {
     needsGarden?: SortOrder
     needsPool?: SortOrder
     needsSecurity?: SortOrder
+    needsGym?: SortOrder
+    needsPlayground?: SortOrder
+    needsGreenArea?: SortOrder
+    prefersFamilyRhythm?: SortOrder
+    prefersQuietRestful?: SortOrder
+    prefersConvenience?: SortOrder
+    prefersWorkFromHome?: SortOrder
+    prefersOutdoorLife?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: UserPreferencesCountOrderByAggregateInput
@@ -12834,6 +13009,14 @@ export namespace Prisma {
     needsGarden?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
     needsPool?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
     needsSecurity?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
+    needsGym?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
+    needsPlayground?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
+    needsGreenArea?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
+    prefersFamilyRhythm?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
+    prefersQuietRestful?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
+    prefersConvenience?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
+    prefersWorkFromHome?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
+    prefersOutdoorLife?: BoolWithAggregatesFilter<"UserPreferences"> | boolean
     createdAt?: DateTimeWithAggregatesFilter<"UserPreferences"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"UserPreferences"> | Date | string
   }
@@ -13120,6 +13303,9 @@ export namespace Prisma {
     hasPool?: BoolFilter<"Property"> | boolean
     hasSecurity?: BoolFilter<"Property"> | boolean
     petFriendly?: BoolFilter<"Property"> | boolean
+    hasGym?: BoolFilter<"Property"> | boolean
+    hasPlayground?: BoolFilter<"Property"> | boolean
+    hasGreenArea?: BoolFilter<"Property"> | boolean
     sourceId?: StringNullableFilter<"Property"> | string | null
     lastScrapedAt?: DateTimeNullableFilter<"Property"> | Date | string | null
     scrapingSource?: StringNullableFilter<"Property"> | string | null
@@ -13155,6 +13341,9 @@ export namespace Prisma {
     hasPool?: SortOrder
     hasSecurity?: SortOrder
     petFriendly?: SortOrder
+    hasGym?: SortOrder
+    hasPlayground?: SortOrder
+    hasGreenArea?: SortOrder
     sourceId?: SortOrderInput | SortOrder
     lastScrapedAt?: SortOrderInput | SortOrder
     scrapingSource?: SortOrderInput | SortOrder
@@ -13194,6 +13383,9 @@ export namespace Prisma {
     hasPool?: BoolFilter<"Property"> | boolean
     hasSecurity?: BoolFilter<"Property"> | boolean
     petFriendly?: BoolFilter<"Property"> | boolean
+    hasGym?: BoolFilter<"Property"> | boolean
+    hasPlayground?: BoolFilter<"Property"> | boolean
+    hasGreenArea?: BoolFilter<"Property"> | boolean
     sourceId?: StringNullableFilter<"Property"> | string | null
     lastScrapedAt?: DateTimeNullableFilter<"Property"> | Date | string | null
     scrapingSource?: StringNullableFilter<"Property"> | string | null
@@ -13229,6 +13421,9 @@ export namespace Prisma {
     hasPool?: SortOrder
     hasSecurity?: SortOrder
     petFriendly?: SortOrder
+    hasGym?: SortOrder
+    hasPlayground?: SortOrder
+    hasGreenArea?: SortOrder
     sourceId?: SortOrderInput | SortOrder
     lastScrapedAt?: SortOrderInput | SortOrder
     scrapingSource?: SortOrderInput | SortOrder
@@ -13268,6 +13463,9 @@ export namespace Prisma {
     hasPool?: BoolWithAggregatesFilter<"Property"> | boolean
     hasSecurity?: BoolWithAggregatesFilter<"Property"> | boolean
     petFriendly?: BoolWithAggregatesFilter<"Property"> | boolean
+    hasGym?: BoolWithAggregatesFilter<"Property"> | boolean
+    hasPlayground?: BoolWithAggregatesFilter<"Property"> | boolean
+    hasGreenArea?: BoolWithAggregatesFilter<"Property"> | boolean
     sourceId?: StringNullableWithAggregatesFilter<"Property"> | string | null
     lastScrapedAt?: DateTimeNullableWithAggregatesFilter<"Property"> | Date | string | null
     scrapingSource?: StringNullableWithAggregatesFilter<"Property"> | string | null
@@ -13583,6 +13781,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutPreferencesInput
@@ -13612,6 +13818,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     preferredNeighborhoods?: PreferredNeighborhoodUncheckedCreateNestedManyWithoutPreferencesInput
@@ -13637,6 +13851,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutPreferencesNestedInput
@@ -13666,6 +13888,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     preferredNeighborhoods?: PreferredNeighborhoodUncheckedUpdateManyWithoutPreferencesNestedInput
@@ -13693,6 +13923,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -13717,6 +13955,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -13743,6 +13989,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14025,6 +14279,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -14060,6 +14317,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -14091,6 +14351,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14126,6 +14389,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14159,6 +14425,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -14188,6 +14457,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14219,6 +14491,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -14645,6 +14920,14 @@ export namespace Prisma {
     needsGarden?: SortOrder
     needsPool?: SortOrder
     needsSecurity?: SortOrder
+    needsGym?: SortOrder
+    needsPlayground?: SortOrder
+    needsGreenArea?: SortOrder
+    prefersFamilyRhythm?: SortOrder
+    prefersQuietRestful?: SortOrder
+    prefersConvenience?: SortOrder
+    prefersWorkFromHome?: SortOrder
+    prefersOutdoorLife?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -14686,6 +14969,14 @@ export namespace Prisma {
     needsGarden?: SortOrder
     needsPool?: SortOrder
     needsSecurity?: SortOrder
+    needsGym?: SortOrder
+    needsPlayground?: SortOrder
+    needsGreenArea?: SortOrder
+    prefersFamilyRhythm?: SortOrder
+    prefersQuietRestful?: SortOrder
+    prefersConvenience?: SortOrder
+    prefersWorkFromHome?: SortOrder
+    prefersOutdoorLife?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -14712,6 +15003,14 @@ export namespace Prisma {
     needsGarden?: SortOrder
     needsPool?: SortOrder
     needsSecurity?: SortOrder
+    needsGym?: SortOrder
+    needsPlayground?: SortOrder
+    needsGreenArea?: SortOrder
+    prefersFamilyRhythm?: SortOrder
+    prefersQuietRestful?: SortOrder
+    prefersConvenience?: SortOrder
+    prefersWorkFromHome?: SortOrder
+    prefersOutdoorLife?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -15071,6 +15370,9 @@ export namespace Prisma {
     hasPool?: SortOrder
     hasSecurity?: SortOrder
     petFriendly?: SortOrder
+    hasGym?: SortOrder
+    hasPlayground?: SortOrder
+    hasGreenArea?: SortOrder
     sourceId?: SortOrder
     lastScrapedAt?: SortOrder
     scrapingSource?: SortOrder
@@ -15111,6 +15413,9 @@ export namespace Prisma {
     hasPool?: SortOrder
     hasSecurity?: SortOrder
     petFriendly?: SortOrder
+    hasGym?: SortOrder
+    hasPlayground?: SortOrder
+    hasGreenArea?: SortOrder
     sourceId?: SortOrder
     lastScrapedAt?: SortOrder
     scrapingSource?: SortOrder
@@ -15142,6 +15447,9 @@ export namespace Prisma {
     hasPool?: SortOrder
     hasSecurity?: SortOrder
     petFriendly?: SortOrder
+    hasGym?: SortOrder
+    hasPlayground?: SortOrder
+    hasGreenArea?: SortOrder
     sourceId?: SortOrder
     lastScrapedAt?: SortOrder
     scrapingSource?: SortOrder
@@ -16194,6 +16502,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     targetCity?: CityCreateNestedOneWithoutUserPreferencesInput
@@ -16221,6 +16537,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     preferredNeighborhoods?: PreferredNeighborhoodUncheckedCreateNestedManyWithoutPreferencesInput
@@ -16294,6 +16618,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     targetCity?: CityUpdateOneWithoutUserPreferencesNestedInput
@@ -16321,6 +16653,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     preferredNeighborhoods?: PreferredNeighborhoodUncheckedUpdateManyWithoutPreferencesNestedInput
@@ -16542,6 +16882,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutPreferencesInput
@@ -16570,6 +16918,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -16635,6 +16991,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutPreferencesNestedInput
@@ -16663,6 +17027,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -16776,6 +17148,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -16809,6 +17184,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -16850,6 +17228,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     user: UserCreateNestedOneWithoutPreferencesInput
@@ -16877,6 +17263,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
     preferredNeighborhoods?: PreferredNeighborhoodUncheckedCreateNestedManyWithoutPreferencesInput
@@ -16990,6 +17384,9 @@ export namespace Prisma {
     hasPool?: BoolFilter<"Property"> | boolean
     hasSecurity?: BoolFilter<"Property"> | boolean
     petFriendly?: BoolFilter<"Property"> | boolean
+    hasGym?: BoolFilter<"Property"> | boolean
+    hasPlayground?: BoolFilter<"Property"> | boolean
+    hasGreenArea?: BoolFilter<"Property"> | boolean
     sourceId?: StringNullableFilter<"Property"> | string | null
     lastScrapedAt?: DateTimeNullableFilter<"Property"> | Date | string | null
     scrapingSource?: StringNullableFilter<"Property"> | string | null
@@ -17040,6 +17437,14 @@ export namespace Prisma {
     needsGarden?: BoolFilter<"UserPreferences"> | boolean
     needsPool?: BoolFilter<"UserPreferences"> | boolean
     needsSecurity?: BoolFilter<"UserPreferences"> | boolean
+    needsGym?: BoolFilter<"UserPreferences"> | boolean
+    needsPlayground?: BoolFilter<"UserPreferences"> | boolean
+    needsGreenArea?: BoolFilter<"UserPreferences"> | boolean
+    prefersFamilyRhythm?: BoolFilter<"UserPreferences"> | boolean
+    prefersQuietRestful?: BoolFilter<"UserPreferences"> | boolean
+    prefersConvenience?: BoolFilter<"UserPreferences"> | boolean
+    prefersWorkFromHome?: BoolFilter<"UserPreferences"> | boolean
+    prefersOutdoorLife?: BoolFilter<"UserPreferences"> | boolean
     createdAt?: DateTimeFilter<"UserPreferences"> | Date | string
     updatedAt?: DateTimeFilter<"UserPreferences"> | Date | string
   }
@@ -17093,6 +17498,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -17126,6 +17534,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -17537,6 +17948,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -17571,6 +17985,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -17617,6 +18034,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17651,6 +18071,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17706,6 +18129,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -17740,6 +18166,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -17817,6 +18246,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17851,6 +18283,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -17963,6 +18398,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -17993,6 +18431,14 @@ export namespace Prisma {
     needsGarden?: boolean
     needsPool?: boolean
     needsSecurity?: boolean
+    needsGym?: boolean
+    needsPlayground?: boolean
+    needsGreenArea?: boolean
+    prefersFamilyRhythm?: boolean
+    prefersQuietRestful?: boolean
+    prefersConvenience?: boolean
+    prefersWorkFromHome?: boolean
+    prefersOutdoorLife?: boolean
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -18072,6 +18518,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18105,6 +18554,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18137,6 +18589,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18166,6 +18621,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     user?: UserUpdateOneRequiredWithoutPreferencesNestedInput
@@ -18193,6 +18656,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     preferredNeighborhoods?: PreferredNeighborhoodUncheckedUpdateManyWithoutPreferencesNestedInput
@@ -18219,6 +18690,14 @@ export namespace Prisma {
     needsGarden?: BoolFieldUpdateOperationsInput | boolean
     needsPool?: BoolFieldUpdateOperationsInput | boolean
     needsSecurity?: BoolFieldUpdateOperationsInput | boolean
+    needsGym?: BoolFieldUpdateOperationsInput | boolean
+    needsPlayground?: BoolFieldUpdateOperationsInput | boolean
+    needsGreenArea?: BoolFieldUpdateOperationsInput | boolean
+    prefersFamilyRhythm?: BoolFieldUpdateOperationsInput | boolean
+    prefersQuietRestful?: BoolFieldUpdateOperationsInput | boolean
+    prefersConvenience?: BoolFieldUpdateOperationsInput | boolean
+    prefersWorkFromHome?: BoolFieldUpdateOperationsInput | boolean
+    prefersOutdoorLife?: BoolFieldUpdateOperationsInput | boolean
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -18244,6 +18723,9 @@ export namespace Prisma {
     hasPool?: boolean
     hasSecurity?: boolean
     petFriendly?: boolean
+    hasGym?: boolean
+    hasPlayground?: boolean
+    hasGreenArea?: boolean
     sourceId?: string | null
     lastScrapedAt?: Date | string | null
     scrapingSource?: string | null
@@ -18278,6 +18760,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18311,6 +18796,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null
@@ -18343,6 +18831,9 @@ export namespace Prisma {
     hasPool?: BoolFieldUpdateOperationsInput | boolean
     hasSecurity?: BoolFieldUpdateOperationsInput | boolean
     petFriendly?: BoolFieldUpdateOperationsInput | boolean
+    hasGym?: BoolFieldUpdateOperationsInput | boolean
+    hasPlayground?: BoolFieldUpdateOperationsInput | boolean
+    hasGreenArea?: BoolFieldUpdateOperationsInput | boolean
     sourceId?: NullableStringFieldUpdateOperationsInput | string | null
     lastScrapedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     scrapingSource?: NullableStringFieldUpdateOperationsInput | string | null

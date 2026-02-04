@@ -21,6 +21,9 @@ export interface PropertyData {
   hasPool?: boolean;
   hasSecurity?: boolean;
   petFriendly?: boolean;
+  hasGym?: boolean;
+  hasPlayground?: boolean;
+  hasGreenArea?: boolean;
   images: string[];
 }
 
