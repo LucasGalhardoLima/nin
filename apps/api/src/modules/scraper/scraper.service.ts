@@ -18,6 +18,34 @@ export class ScraperService {
     ]);
   }
 
+  private normalizeText(value?: string | null): string | undefined {
+    if (!value) return undefined;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  }
+
+  private normalizeCityName(value?: string | null): string | undefined {
+    const text = this.normalizeText(value);
+    if (!text) return undefined;
+    return text;
+  }
+
+  private dedupeProperties(properties: PropertyData[]): PropertyData[] {
+    const seen = new Set<string>();
+    const unique: PropertyData[] = [];
+
+    for (const prop of properties) {
+      const sourceId = this.normalizeText(prop.sourceId);
+      const sourceUrl = this.normalizeText(prop.sourceUrl);
+      const key = `${prop.scrapingSource}::${sourceId || 'no-id'}::${sourceUrl || 'no-url'}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      unique.push(prop);
+    }
+
+    return unique;
+  }
+
   /**
    * Run a scraping job for a specific source
    */
@@ -51,7 +79,7 @@ export class ScraperService {
         this.logger.log(`Scraping ${source} for ${city}...`);
         
         try {
-          const properties = await scraper.scrapeListings(city);
+          const properties = this.dedupeProperties(await scraper.scrapeListings(city));
           totalFound += properties.length;
           
           // Process properties in batches for better performance
@@ -123,84 +151,150 @@ export class ScraperService {
    * Upsert a property into the database
    */
   private async upsertProperty(data: PropertyData): Promise<{ created: boolean }> {
+    const sourceUrl = this.normalizeText(data.sourceUrl);
+    if (!sourceUrl) {
+      throw new Error('Missing sourceUrl');
+    }
+
+    const sourceId = this.normalizeText(data.sourceId);
+    const scrapingSource = this.normalizeText(data.scrapingSource);
+    if (!scrapingSource) {
+      throw new Error('Missing scrapingSource');
+    }
+
+    const title = this.normalizeText(data.title) || 'Imóvel sem título';
+    const cityName = this.normalizeCityName(data.cityName);
+    if (!cityName) {
+      throw new Error('Missing cityName');
+    }
+
     // 1. Find or create City
     let city = await this.prisma.city.findFirst({
-      where: { name: { contains: data.cityName } }, 
+      where: { name: { equals: cityName, mode: 'insensitive' } },
     });
 
     if (!city) {
-        this.logger.warn(`City not found: ${data.cityName}. Skipping property ${data.title}`);
-        throw new Error(`City not found: ${data.cityName}`);
+      city = await this.prisma.city.findFirst({
+        where: { name: { contains: cityName, mode: 'insensitive' } },
+      });
+    }
+
+    if (!city) {
+        this.logger.warn(`City not found: ${cityName}. Skipping property ${title}`);
+        throw new Error(`City not found: ${cityName}`);
     }
 
     // 2. Find or create Neighborhood
     let neighborhoodId: string | undefined;
-    if (data.neighborhoodName) {
+    const neighborhoodName = this.normalizeText(data.neighborhoodName);
+    if (neighborhoodName) {
       const neighborhood = await this.prisma.neighborhood.findFirst({
         where: { 
-          name: { contains: data.neighborhoodName },
+          name: { equals: neighborhoodName, mode: 'insensitive' },
           cityId: city.id
         }
       });
-      neighborhoodId = neighborhood?.id;
+      if (!neighborhood) {
+        const neighborhoodFallback = await this.prisma.neighborhood.findFirst({
+          where: {
+            name: { contains: neighborhoodName, mode: 'insensitive' },
+            cityId: city.id
+          }
+        });
+        neighborhoodId = neighborhoodFallback?.id;
+      } else {
+        neighborhoodId = neighborhood?.id;
+      }
     }
 
     // 3. Upsert Property
     const existing = await this.prisma.property.findFirst({
       where: {
-        sourceId: data.sourceId,
-        scrapingSource: data.scrapingSource,
+        OR: [
+          { sourceId: sourceId || undefined, scrapingSource },
+          { sourceUrl: sourceUrl },
+        ],
       },
     });
 
     if (existing) {
+      const updateData: Record<string, unknown> = {
+        title: title,
+        description: this.normalizeText(data.description) ?? existing.description,
+        transactionType: data.transactionType || existing.transactionType,
+        propertyType: data.propertyType || existing.propertyType,
+        address: this.normalizeText(data.address) ?? existing.address,
+        hasParking: data.hasParking ?? existing.hasParking,
+        hasPool: data.hasPool ?? existing.hasPool,
+        hasGarden: data.hasGarden ?? existing.hasGarden,
+        hasSecurity: data.hasSecurity ?? existing.hasSecurity,
+        petFriendly: data.petFriendly ?? existing.petFriendly,
+        isActive: true,
+        lastScrapedAt: new Date(),
+        lastSeenAt: new Date(),
+      };
+
+      if (typeof data.price === 'number' && data.price > 0) {
+        updateData.price = data.price;
+      }
+      if (typeof data.bedrooms === 'number' && data.bedrooms > 0) {
+        updateData.bedrooms = data.bedrooms;
+      }
+      if (typeof data.bathrooms === 'number' && data.bathrooms > 0) {
+        updateData.bathrooms = data.bathrooms;
+      }
+      if (typeof data.area === 'number' && data.area > 0) {
+        updateData.area = data.area;
+      }
+      if (neighborhoodId) {
+        updateData.neighborhoodId = neighborhoodId;
+      }
+
       await this.prisma.property.update({
         where: { id: existing.id },
-        data: {
-            title: data.title,
-            description: data.description,
-            price: data.price,
-            bedrooms: data.bedrooms,
-            bathrooms: data.bathrooms,
-            area: data.area,
-            transactionType: data.transactionType,
-            propertyType: data.propertyType,
-            address: data.address,
-            hasParking: data.hasParking,
-            hasPool: data.hasPool,
-            hasGarden: data.hasGarden,
-            hasSecurity: data.hasSecurity,
-            isActive: true, // Reactivate if it was stale
-            lastScrapedAt: new Date(),
-        },
+        data: updateData,
       });
+
+      if (data.images?.length) {
+        await this.prisma.propertyImage.deleteMany({ where: { propertyId: existing.id } });
+        await this.prisma.propertyImage.createMany({
+          data: data.images.map((url, index) => ({
+            propertyId: existing.id,
+            url,
+            isPrimary: index === 0,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
       return { created: false };
     } else {
       await this.prisma.property.create({
         data: {
-          title: data.title,
-          description: data.description,
+          title: title,
+          description: this.normalizeText(data.description),
           price: data.price ?? 0,
           transactionType: data.transactionType,
           propertyType: data.propertyType,
-          bedrooms: data.bedrooms,
-          bathrooms: data.bathrooms,
+          bedrooms: data.bedrooms ?? 0,
+          bathrooms: data.bathrooms ?? 0,
           area: data.area || 0,
-          sourceUrl: data.sourceUrl,
+          sourceUrl: sourceUrl,
           sourceName: data.sourceName,
-          sourceId: data.sourceId,
-          scrapingSource: data.scrapingSource,
+          sourceId: sourceId,
+          scrapingSource: scrapingSource,
           lastScrapedAt: new Date(),
+          lastSeenAt: new Date(),
           cityId: city.id,
           neighborhoodId: neighborhoodId,
-          address: data.address,
+          address: this.normalizeText(data.address),
           hasParking: data.hasParking,
           hasPool: data.hasPool,
           hasGarden: data.hasGarden,
           hasSecurity: data.hasSecurity,
           petFriendly: data.petFriendly,
           images: {
-            create: data.images.map((url, index) => ({
+            create: (data.images || []).map((url, index) => ({
               url,
               isPrimary: index === 0,
             })),

@@ -64,18 +64,55 @@ export class MatchingService {
     dto: MatchListDto,
     savedMatchMap?: Map<string, any>,
   ) {
-    // Get all active properties
-    const allProperties = await this.propertiesService.findAllActive();
-    
-    // Filter by target city if specified
-    let properties = preferences.targetCityId
-      ? allProperties.filter(p => p.cityId === preferences.targetCityId)
-      : allProperties;
-
-    // Filter by neighborhood if specified in DTO
-    if (dto.neighborhoodId) {
-      properties = properties.filter(p => p.neighborhoodId === dto.neighborhoodId);
+    // DB-level prefiltering for performance and quality
+    const priceFilter: { gte?: number; lte?: number } = {};
+    if (preferences.minPrice !== null && preferences.minPrice !== undefined) {
+      priceFilter.gte = Math.floor(preferences.minPrice * 0.5);
     }
+    if (preferences.maxPrice !== null && preferences.maxPrice !== undefined) {
+      priceFilter.lte = Math.ceil(preferences.maxPrice * 1.5);
+    }
+
+    const where: any = {
+      isActive: true,
+      ...(preferences.targetCityId && { cityId: preferences.targetCityId }),
+      ...(dto.neighborhoodId && { neighborhoodId: dto.neighborhoodId }),
+      ...(preferences.transactionType && { transactionType: preferences.transactionType }),
+      ...(Object.keys(priceFilter).length > 0 && { price: priceFilter }),
+    };
+
+    if (preferences.minBedrooms !== undefined) {
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { bedrooms: { gte: preferences.minBedrooms } },
+            { bedrooms: 0 }, // allow unknown bedrooms
+          ],
+        },
+      ];
+    }
+
+    if (preferences.minBathrooms !== undefined) {
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { bathrooms: { gte: preferences.minBathrooms } },
+            { bathrooms: 0 }, // allow unknown bathrooms
+          ],
+        },
+      ];
+    }
+
+    const properties = await this.prisma.property.findMany({
+      where,
+      include: {
+        city: true,
+        neighborhood: true,
+        images: true,
+      },
+    });
 
     // Get POIs for lifestyle scoring
     const pois = await this.prisma.pointOfInterest.findMany({
@@ -97,10 +134,14 @@ export class MatchingService {
           scoreBreakdown.location * (WEIGHTS.location / 100) +
           scoreBreakdown.lifestyle * (WEIGHTS.lifestyle / 100) +
           scoreBreakdown.amenities * (WEIGHTS.amenities / 100);
+        const recencyBoost = this.calculateRecencyBoost(
+          property.lastScrapedAt ?? property.createdAt,
+        );
+        const finalScore = Math.min(100, totalScore + recencyBoost);
 
         return {
           property: this.propertiesService.toResponse(property),
-          matchScore: Math.round(totalScore * 10) / 10,
+          matchScore: Math.round(finalScore * 10) / 10,
           scoreBreakdown,
           isFavorite: saved?.isFavorite ?? false,
           isHidden: false,
@@ -110,8 +151,9 @@ export class MatchingService {
 
     // Apply filters
     let filtered = matches;
-    if (dto.minScore !== undefined) {
-      filtered = filtered.filter((m) => m.matchScore >= dto.minScore!);
+    const minScore = dto.minScore ?? 40;
+    if (minScore !== undefined) {
+      filtered = filtered.filter((m) => m.matchScore >= minScore);
     }
 
     // Sort
@@ -121,6 +163,12 @@ export class MatchingService {
       switch (dto.sortBy) {
         case 'price':
           return (a.property.price - b.property.price) * (dto.sortOrder === 'asc' ? 1 : -1);
+        case 'date':
+          return (
+            (new Date(b.property.lastScrapedAt || 0).getTime() -
+              new Date(a.property.lastScrapedAt || 0).getTime()) *
+            (dto.sortOrder === 'asc' ? -1 : 1)
+          );
         case 'score':
         default:
           // b - a = descending (highest first)
@@ -221,6 +269,14 @@ export class MatchingService {
       score -= diff * 20; // -20 points per missing bathroom
     }
 
+    // Penalize unknown values to avoid over-ranking incomplete listings
+    if (property.bedrooms === 0) {
+      score -= 15;
+    }
+    if (property.bathrooms === 0) {
+      score -= 15;
+    }
+
     return Math.max(0, Math.min(100, score));
   }
 
@@ -276,10 +332,6 @@ export class MatchingService {
     },
     pois: Array<{ type: string; latitude: number; longitude: number }>,
   ): number {
-    if (!property.latitude || !property.longitude) {
-      return 50; // No location data, neutral score
-    }
-
     const poiWeights = {
       SCHOOL: preferences.schoolProximityWeight,
       HOSPITAL: preferences.hospitalProximityWeight,
@@ -287,48 +339,52 @@ export class MatchingService {
       BUS_STOP: preferences.publicTransportWeight,
     };
 
-    const totalWeight =
-      Object.values(poiWeights).reduce((a, b) => a + b, 0) +
-      preferences.quietnessWeight +
-      preferences.safetyWeight;
+    const hasGeo = property.latitude !== null && property.longitude !== null;
+    const hasNeighborhood = !!property.neighborhood;
 
-    if (totalWeight === 0) return 100;
+    const totalWeight =
+      (hasGeo ? Object.values(poiWeights).reduce((a, b) => a + b, 0) : 0) +
+      (hasNeighborhood ? preferences.quietnessWeight + preferences.safetyWeight : 0);
+
+    if (totalWeight === 0) return 50;
 
     let weightedScore = 0;
 
     // POI-based proximity scoring
-    for (const [poiType, weight] of Object.entries(poiWeights)) {
-      const typePois = pois.filter((p) => p.type === poiType);
-      if (typePois.length === 0 || weight === 0) continue;
+    if (hasGeo) {
+      for (const [poiType, weight] of Object.entries(poiWeights)) {
+        const typePois = pois.filter((p) => p.type === poiType);
+        if (typePois.length === 0 || weight === 0) continue;
 
-      // Find nearest POI of this type
-      const distances = typePois.map((poi) =>
-        this.haversineDistance(
-          property.latitude!,
-          property.longitude!,
-          poi.latitude,
-          poi.longitude,
-        ),
-      );
-      const nearestDistance = Math.min(...distances);
+        // Find nearest POI of this type
+        const distances = typePois.map((poi) =>
+          this.haversineDistance(
+            property.latitude!,
+            property.longitude!,
+            poi.latitude,
+            poi.longitude,
+          ),
+        );
+        const nearestDistance = Math.min(...distances);
 
-      // Score based on distance (0-2km = 100, 2-5km = gradual decrease, >5km = low)
-      let proximityScore: number;
-      if (nearestDistance <= 0.5) {
-        proximityScore = 100;
-      } else if (nearestDistance <= 1) {
-        proximityScore = 90;
-      } else if (nearestDistance <= 2) {
-        proximityScore = 80;
-      } else if (nearestDistance <= 3) {
-        proximityScore = 60;
-      } else if (nearestDistance <= 5) {
-        proximityScore = 40;
-      } else {
-        proximityScore = 20;
+        // Score based on distance (0-2km = 100, 2-5km = gradual decrease, >5km = low)
+        let proximityScore: number;
+        if (nearestDistance <= 0.5) {
+          proximityScore = 100;
+        } else if (nearestDistance <= 1) {
+          proximityScore = 90;
+        } else if (nearestDistance <= 2) {
+          proximityScore = 80;
+        } else if (nearestDistance <= 3) {
+          proximityScore = 60;
+        } else if (nearestDistance <= 5) {
+          proximityScore = 40;
+        } else {
+          proximityScore = 20;
+        }
+
+        weightedScore += proximityScore * (weight / totalWeight);
       }
-
-      weightedScore += proximityScore * (weight / totalWeight);
     }
 
     // Quietness scoring using neighborhood data
@@ -344,6 +400,18 @@ export class MatchingService {
     }
 
     return Math.min(100, weightedScore);
+  }
+
+  private calculateRecencyBoost(date: Date | null | undefined): number {
+    if (!date) return 0;
+
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (diffDays <= 3) return 5;
+    if (diffDays <= 7) return 3;
+    if (diffDays <= 14) return 1;
+    return 0;
   }
 
   private calculateAmenityScore(

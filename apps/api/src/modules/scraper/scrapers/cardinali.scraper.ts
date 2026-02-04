@@ -11,6 +11,14 @@ export class CardinalScraper extends BaseScraper {
     });
   }
 
+  private normalizeCityKey(city: string): string {
+    return city
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
   async scrapeListings(city: string): Promise<PropertyData[]> {
     try {
       await this.initBrowser();
@@ -45,13 +53,21 @@ export class CardinalScraper extends BaseScraper {
     urlPath: string
   ): Promise<PropertyData[]> {
     // Cookie mapping for cities
-    const cityIdMap: Record<string, string> = {
-        'araraquara': '409',
-        'sao carlos': '190',
-        'ibate': '103'
+    const cityIdMap: Record<string, { id: string; displayName: string }> = {
+        'araraquara': { id: '409', displayName: 'Araraquara' },
+        'sao carlos': { id: '190', displayName: 'São Carlos' },
+        'ibate': { id: '103', displayName: 'Ibaté' },
+        'campinas': { id: '73', displayName: 'Campinas' },
+        'ribeirao preto': { id: '169', displayName: 'Ribeirão Preto' },
     };
-    
-    const cityId = cityIdMap[city.toLowerCase()] || '190'; 
+
+    const cityKey = this.normalizeCityKey(city);
+    const cityCfg = cityIdMap[cityKey];
+
+    if (!cityCfg) {
+      this.logger.warn(`City not supported by Cardinali scraper: ${city}`);
+      return [];
+    }
     
     // Create a new context with cookies
     const context = await this.browser.newContext({
@@ -60,11 +76,11 @@ export class CardinalScraper extends BaseScraper {
     
     // Add cookies to context
     await context.addCookies([
-      { name: 'sel_cid_id_cidade', value: cityId, domain: '.cardinali.com.br', path: '/' }
+      { name: 'sel_cid_id_cidade', value: cityCfg.id, domain: '.cardinali.com.br', path: '/' }
     ]);
 
-    const url = `https://www.cardinali.com.br/${urlPath}/${city}`;
-    this.logger.log(`Navigating to ${url} with city ID ${cityId}`);
+    const url = `https://www.cardinali.com.br/${urlPath}/${cityKey}`;
+    this.logger.log(`Navigating to ${url} with city ID ${cityCfg.id}`);
     
     const page = await context.newPage();
     await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
@@ -105,7 +121,7 @@ export class CardinalScraper extends BaseScraper {
         const codeMatch = cardText.match(/Cód\.\s*(\d+)/);
         
         const price = priceMatch ? this.normalizePrice(priceMatch[1]) : 0;
-        const sourceId = codeMatch ? codeMatch[1] : this.extractPropertyId(propertyUrl);
+        const sourceId = codeMatch ? codeMatch[1] : (this.extractPropertyId(propertyUrl) || propertyUrl);
 
         // Extract title using the correct class
         const titleElement = await card.$('.card-titulo');
@@ -136,6 +152,8 @@ export class CardinalScraper extends BaseScraper {
         const bathrooms = this.extractNumber(cardText, /banhos?/i) || 0;
         const parking = this.extractNumber(cardText, /garagens?|vagas?/i) || 0;
         const suites = this.extractNumber(cardText, /suítes?/i) || 0;
+        const areaMatch = cardText.match(/(\d+)\s*m²/i);
+        const area = areaMatch ? parseInt(areaMatch[1], 10) : 0;
 
         const data: PropertyData = {
           sourceId: sourceId,
@@ -149,9 +167,10 @@ export class CardinalScraper extends BaseScraper {
           transactionType: transactionType,
           bedrooms: bedrooms,
           bathrooms: bathrooms + suites, 
-          area: 0, 
-          cityName: city,
+          area: area, 
+          cityName: cityCfg.displayName,
           address: locationText,
+          neighborhoodName: neighborhood,
           hasParking: parking > 0,
           hasPool: title.toLowerCase().includes('piscina'),
           hasGarden: title.toLowerCase().includes('jardim'),
@@ -184,6 +203,8 @@ export class CardinalScraper extends BaseScraper {
   private determinePropertyType(title: string): string {
     const text = title.toLowerCase();
     if (text.includes('apartamento') || text.includes('apto')) return 'APARTMENT';
+    if (text.includes('cobertura')) return 'PENTHOUSE';
+    if (text.includes('kitnet') || text.includes('studio') || text.includes('flat')) return 'APARTMENT';
     if (text.includes('casa') || text.includes('sobrado')) return 'HOUSE';
     if (text.includes('terreno') || text.includes('lote')) return 'LAND';
     if (text.includes('comercial') || text.includes('sala')) return 'COMMERCIAL';

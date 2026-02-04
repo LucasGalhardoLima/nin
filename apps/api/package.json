@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "nest build",
-    "dev": "nest start --watch",
+    "postbuild": "node scripts/ensure-entry.js",
+    "dev": "node scripts/ensure-entry.js && nest start --watch",
     "start": "node dist/main",
     "start:prod": "node dist/main",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",

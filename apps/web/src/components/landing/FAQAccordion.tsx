@@ -12,6 +12,11 @@ const faqs = [
       'Sim! O cadastro e uso básico do Nin. são totalmente gratuitos. Você pode criar seu perfil, definir preferências e receber matches sem custo algum.',
   },
   {
+    question: 'De onde vêm os imóveis?',
+    answer:
+      'Reunimos imóveis de fontes locais confiáveis e atualizamos diariamente. Nosso objetivo é ampliar essas fontes com parcerias diretas.',
+  },
+  {
     question: 'Como funciona o score de compatibilidade?',
     answer:
       'Nosso algoritmo analisa suas preferências de vida, orçamento, tamanho da família e estilo de vida para calcular a compatibilidade com cada imóvel. Quanto maior o score, mais alinhado o imóvel está com o que você procura.',
@@ -19,10 +24,10 @@ const faqs = [
   {
     question: 'Em quais cidades o Nin. está disponível?',
     answer:
-      'Atualmente estamos operando em Matão e Araraquara, no interior de São Paulo. Estamos expandindo rapidamente e em breve teremos mais cidades disponíveis.',
+      'Atualmente estamos operando em Matão e Araraquara, no interior de São Paulo. Estamos expandindo com parcerias locais e em breve teremos mais cidades disponíveis.',
   },
   {
-    question: 'Preciso ser corretor para usar?',
+    question: 'Preciso ser corretor ou imobiliária para usar?',
     answer:
       'Não! O Nin. foi criado para pessoas que estão buscando seu próximo lar. Se você está procurando um imóvel para morar ou investir, o Nin. é para você.',
   },

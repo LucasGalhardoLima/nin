@@ -36,6 +36,14 @@ export class ChavesNaMaoScraper extends BaseScraper {
     super('chavesnamao');
   }
 
+  private normalizeCityKey(city: string): string {
+    return city
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  }
+
   protected async initBrowser(): Promise<void> {
     if (!this.browser) {
       this.logger.log('Initializing browser...');
@@ -50,7 +58,7 @@ export class ChavesNaMaoScraper extends BaseScraper {
     try {
       await this.initBrowser();
       const allResults: PropertyData[] = [];
-      const cityCfg = this.cityMap[city.toLowerCase()];
+      const cityCfg = this.cityMap[this.normalizeCityKey(city)];
 
       if (!cityCfg) {
         this.logger.error(`City not found in mapping: ${city}`);
@@ -188,9 +196,7 @@ export class ChavesNaMaoScraper extends BaseScraper {
 
     // Imagem
     const imageElem = await card.$('.card_cardGallery__ep1mJ img, picture img');
-    const imageUrl = imageElem
-      ? await imageElem.getAttribute('src')
-      : null;
+    const imageUrl = imageElem ? await this.getImageUrl(imageElem) : null;
 
     // Conteúdo
     const content = await card.$('.card_cardContent__3O3v0');
@@ -216,9 +222,26 @@ export class ChavesNaMaoScraper extends BaseScraper {
     const price = this.extractPrice(priceText);
 
     // Características (quartos, banheiros, área, vagas)
-    const features = await this.extractFeatures(page, content);
+    let features = await this.extractFeatures(page, content);
+
+    if (
+      features.bedrooms === undefined ||
+      features.bathrooms === undefined ||
+      features.area === undefined
+    ) {
+      const details = await this.fetchDetailsFromPropertyPage(absoluteUrl);
+      if (details) {
+        features = {
+          bedrooms: features.bedrooms ?? details.bedrooms,
+          bathrooms: features.bathrooms ?? details.bathrooms,
+          parkingSpaces: features.parkingSpaces ?? details.parkingSpaces,
+          area: features.area ?? details.area,
+        };
+      }
+    }
 
     const title = this.cleanText(titleText);
+    const normalizedType = this.determinePropertyType(title, propertyType);
 
     if (!title || title.length < 5) {
       this.logger.warn('Invalid property title');
@@ -242,7 +265,7 @@ export class ChavesNaMaoScraper extends BaseScraper {
       title: title,
       description: '',
       price: price !== null ? price : undefined, 
-      propertyType,
+      propertyType: normalizedType,
       transactionType,
       bedrooms: features.bedrooms || 0,
       bathrooms: features.bathrooms || 0,
@@ -255,6 +278,39 @@ export class ChavesNaMaoScraper extends BaseScraper {
       hasSecurity: title.toLowerCase().includes('condomínio'),
       images: imageUrl ? [imageUrl] : [],
     };
+  }
+
+  private determinePropertyType(title: string, fallbackType: string): string {
+    const text = title.toLowerCase();
+
+    if (text.includes('apartamento') || text.includes('apto')) return 'APARTMENT';
+    if (text.includes('cobertura')) return 'PENTHOUSE';
+    if (text.includes('casa') || text.includes('sobrado')) return 'HOUSE';
+    if (text.includes('terreno') || text.includes('lote')) return 'LAND';
+    if (text.includes('comercial') || text.includes('sala')) return 'COMMERCIAL';
+
+    return fallbackType;
+  }
+
+  private async getImageUrl(elem: ElementHandle): Promise<string | null> {
+    const src = await elem.getAttribute('src');
+    const dataSrc = await elem.getAttribute('data-src');
+    const srcSet = await elem.getAttribute('srcset');
+    const dataSrcSet = await elem.getAttribute('data-srcset');
+
+    const pickFromSrcSet = (value: string | null) => {
+      if (!value) return null;
+      const first = value.split(',')[0]?.trim();
+      return first ? first.split(' ')[0] : null;
+    };
+
+    return (
+      dataSrc ||
+      src ||
+      pickFromSrcSet(dataSrcSet) ||
+      pickFromSrcSet(srcSet) ||
+      null
+    );
   }
 
   private async extractFeatures(
@@ -277,8 +333,14 @@ export class ChavesNaMaoScraper extends BaseScraper {
     let area: number | undefined;
 
     for (const elem of featureElements) {
-      const text = await page.evaluate((el) => el.textContent || '', elem);
-      const cleanText = text.trim().toLowerCase();
+      const data = await page.evaluate((el) => {
+        return {
+          text: el.textContent || '',
+          aria: el.getAttribute('aria-label') || '',
+          title: el.getAttribute('title') || '',
+        };
+      }, elem);
+      const cleanText = `${data.aria} ${data.title} ${data.text}`.trim().toLowerCase();
 
       // Quartos
       if (
@@ -306,8 +368,8 @@ export class ChavesNaMaoScraper extends BaseScraper {
 
       // Área
       if (cleanText.includes('m²') || cleanText.includes('m2')) {
-        const match = cleanText.match(/(\d+)/);
-        if (match && !area) area = parseInt(match[1]);
+        const parsedArea = this.parseArea(cleanText);
+        if (parsedArea && !area) area = parsedArea;
       }
     }
 
@@ -332,6 +394,60 @@ export class ChavesNaMaoScraper extends BaseScraper {
 
   private cleanText(text: string): string {
     return text.replace(/\s+/g, ' ').trim();
+  }
+
+  private parseArea(text: string): number | undefined {
+    const match = text.match(/(\d{2,4})\s*(m²|m2)/i);
+    if (match) return parseInt(match[1], 10);
+    return undefined;
+  }
+
+  private async fetchDetailsFromPropertyPage(url: string): Promise<{
+    bedrooms?: number;
+    bathrooms?: number;
+    parkingSpaces?: number;
+    area?: number;
+  } | null> {
+    const detailPage = await this.browser.newPage();
+
+    try {
+      await detailPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await this.waitForPageReady(detailPage);
+
+      const labels = await detailPage.$$eval('[aria-label]', (els) =>
+        els.map((el) => el.getAttribute('aria-label') || '').filter(Boolean)
+      );
+      const titles = await detailPage.$$eval('[title]', (els) =>
+        els.map((el) => el.getAttribute('title') || '').filter(Boolean)
+      );
+      const combined = [...labels, ...titles].map((t) => t.toLowerCase());
+
+      const getCount = (needle: string) => {
+        const found = combined.find((text) => text.includes(needle));
+        if (!found) return undefined;
+        const match = found.match(/(\d+)/);
+        return match ? parseInt(match[1], 10) : undefined;
+      };
+
+      const bedrooms = getCount('quarto') ?? getCount('dorm');
+      const bathrooms = getCount('banh');
+      const parkingSpaces = getCount('vaga') ?? getCount('garag');
+
+      const areaLabel = combined.find((text) => text.includes('m²') || text.includes('m2'));
+      const area = areaLabel ? this.parseArea(areaLabel) : undefined;
+
+      return {
+        bedrooms,
+        bathrooms,
+        parkingSpaces,
+        area,
+      };
+    } catch (error) {
+      this.logger.warn(`Failed to fetch property details: ${error.message}`);
+      return null;
+    } finally {
+      await detailPage.close();
+    }
   }
 
   async scrapePropertyDetails(url: string): Promise<PropertyData | null> {

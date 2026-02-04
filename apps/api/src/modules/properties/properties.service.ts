@@ -126,6 +126,9 @@ export class PropertiesService {
       })),
       sourceUrl: property.sourceUrl,
       sourceName: property.sourceName,
+      lastScrapedAt: property.lastScrapedAt,
+      lastSeenAt: property.lastSeenAt,
+      createdAt: property.createdAt,
     };
   }
 }

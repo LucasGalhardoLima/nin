@@ -62,13 +62,13 @@ export function PropertyShowcase() {
           variants={fadeInUp}
           className="font-heading text-4xl font-bold text-center text-nin-900 mb-6"
         >
-          Imóveis em destaque
+          Exemplos de matches
         </motion.h2>
         <motion.p
           variants={fadeInUp}
           className="text-center text-nin-600 mb-16 max-w-xl mx-auto"
         >
-          Veja alguns dos imóveis que estão esperando pelo match perfeito
+          Uma amostra ilustrativa do tipo de match que você vai encontrar
         </motion.p>
 
         <div className="grid md:grid-cols-3 gap-8">
@@ -79,6 +79,9 @@ export function PropertyShowcase() {
               whileHover={{ y: -4 }}
               className="card overflow-hidden group cursor-pointer"
             >
+              <div className="text-[10px] uppercase tracking-wider text-nin-400 font-semibold mb-2">
+                Exemplo
+              </div>
               {/* Image Placeholder */}
               <div className="relative h-48 -mx-6 -mt-6 mb-4 bg-nin-100 overflow-hidden">
                 <div className="absolute inset-0 flex items-center justify-center text-nin-300">

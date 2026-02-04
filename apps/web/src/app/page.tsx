@@ -61,15 +61,15 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-nin-100 text-nin-700 text-sm font-medium mb-8"
             >
               <MapPin className="w-4 h-4" />
-              Exclusivo para Matão e Araraquara
+              Disponível agora em Matão e Araraquara
             </motion.div>
 
             <motion.h1
               variants={fadeInUp}
               className="font-heading text-6xl md:text-7xl lg:text-8xl font-bold text-nin-900 mb-8 tracking-tight leading-[1.1]"
             >
-              Sua vida em <br />
-              <span className="text-nin-500">perfeito match.</span>
+              Seu próximo lar, <br />
+              <span className="text-nin-500">no seu estilo.</span>
             </motion.h1>
 
             <motion.p
@@ -77,8 +77,23 @@ export default function LandingPage() {
               className="text-xl md:text-2xl text-nin-700 mb-12 max-w-2xl mx-auto leading-relaxed"
             >
               Cansado de ver anúncios que não fazem sentido? <br className="hidden md:block" />
-              O Nin. conecta seu estilo de vida aos melhores imóveis do interior paulista.
+              O Nin. cruza estilo de vida, orçamento e bairro para mostrar só o que combina com você.
             </motion.p>
+
+            <motion.div
+              variants={fadeInUp}
+              className="flex flex-wrap justify-center gap-2 text-xs font-semibold text-nin-600 mb-10"
+            >
+              <span className="px-3 py-1 rounded-full bg-white border border-nin-200">
+                Preferências de vida
+              </span>
+              <span className="px-3 py-1 rounded-full bg-white border border-nin-200">
+                Score 0–100
+              </span>
+              <span className="px-3 py-1 rounded-full bg-white border border-nin-200">
+                Fontes locais integradas
+              </span>
+            </motion.div>
 
             <motion.div
               variants={fadeInUp}
@@ -118,31 +133,31 @@ export default function LandingPage() {
           >
             A inteligência por trás do match
           </motion.h2>
-          <motion.p
-            variants={fadeInUp}
-            className="text-center text-nin-600 mb-16 max-w-2xl mx-auto"
-          >
-            Cruzamos dados de segurança, silêncio e proximidade com infraestrutura em todos os bairros de Matão e Araraquara.
-          </motion.p>
-          <div className="grid md:grid-cols-3 gap-12">
-            <FeatureCard
-              icon={<Users className="w-8 h-8" />}
-              title="Perfil de Estilo de Vida"
-              description="Diga se valoriza silêncio no Centro ou proximidade com escolas na Vila Xavier. Nós entendemos."
-            />
-            <FeatureCard
-              icon={<Heart className="w-8 h-8" />}
-              title="Algoritmo de Afinidade"
-              description="Nossa IA cruza sua rotina com dados reais dos bairros, entregando um score de compatibilidade de 0 a 100%."
-            />
-            <FeatureCard
-              icon={<MapPin className="w-8 h-8" />}
-              title="Curadoria Local"
-              description="Integramos com as maiores imobiliárias da região para garantir que você veja apenas o que importa."
-            />
-          </div>
-        </motion.div>
-      </section>
+        <motion.p
+          variants={fadeInUp}
+          className="text-center text-nin-600 mb-16 max-w-2xl mx-auto"
+        >
+          Cruzamos dados de segurança, silêncio e proximidade com infraestrutura em todos os bairros.
+        </motion.p>
+        <div className="grid md:grid-cols-3 gap-12">
+          <FeatureCard
+            icon={<Users className="w-8 h-8" />}
+            title="Perfil de Estilo de Vida"
+            description="Defina o que é essencial: silêncio, escolas, comércio, segurança e pets."
+          />
+          <FeatureCard
+            icon={<Heart className="w-8 h-8" />}
+            title="Algoritmo de Afinidade"
+            description="Cruzamos orçamento, espaço e vizinhança para gerar um score de 0 a 100."
+          />
+          <FeatureCard
+            icon={<MapPin className="w-8 h-8" />}
+            title="Curadoria Local"
+            description="Reunimos imóveis de fontes locais e atualizamos diariamente."
+          />
+        </div>
+      </motion.div>
+    </section>
 
       {/* Matching Diagram */}
       <MatchingDiagram />
@@ -172,8 +187,8 @@ export default function LandingPage() {
             variants={fadeInUp}
             className="text-center text-nin-600 mb-12 max-w-xl mx-auto"
           >
-            Começamos em duas cidades do interior paulista,
-            mas estamos crescendo rapidamente.
+            Começamos em duas cidades do interior paulista
+            e estamos crescendo com parcerias locais.
           </motion.p>
           <motion.div variants={fadeInUp} className="flex flex-wrap justify-center gap-6">
             <CityCard name="Matão" state="SP" />
@@ -210,7 +225,7 @@ export default function LandingPage() {
             O próximo capítulo da sua vida começa aqui.
           </motion.h2>
           <motion.p variants={fadeInUp} className="text-nin-100 text-xl mb-12 opacity-90 leading-relaxed">
-            Junte-se a centenas de moradores de Araraquara e Matão que encontraram o lugar ideal sem perder tempo com visitas frustrantes.
+            Comece agora e receba opções realmente alinhadas ao que você procura, sem perder tempo com visitas frustrantes.
           </motion.p>
           <motion.div variants={fadeInUp} whileHover={hoverScale}>
             <Link href="/register" className="btn bg-white text-nin-900 hover:bg-nin-50 text-xl px-12 py-5 shadow-2xl">

@@ -7,15 +7,15 @@ import { staggerContainer, fadeInUp } from '@/lib/animations';
 const comparisons = [
   {
     traditional: 'Filtros genéricos',
-    nin: 'Preferências de vida',
+    nin: 'Preferências de vida reais',
   },
   {
     traditional: 'Horas navegando',
-    nin: 'Matches instantâneos',
+    nin: 'Matches ordenados por afinidade',
   },
   {
     traditional: 'Resultados irrelevantes',
-    nin: 'Ordenado por compatibilidade',
+    nin: 'Compatibilidade de 0–100',
   },
   {
     traditional: 'Sem considerar bairro',
@@ -47,7 +47,7 @@ export function ComparisonTable() {
           variants={fadeInUp}
           className="text-center text-nin-600 mb-16 max-w-xl mx-auto"
         >
-          Por que continuar perdendo tempo com buscas que não entendem você?
+          Menos filtros, mais afinidade. Por que perder tempo com buscas que não entendem você?
         </motion.p>
 
         <motion.div variants={fadeInUp} className="bg-white rounded-nin shadow-nin overflow-hidden">

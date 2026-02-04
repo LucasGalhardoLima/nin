@@ -9,25 +9,25 @@ const steps = [
     icon: Users,
     number: '1',
     title: 'Perfil',
-    description: 'Conte sobre você e sua família',
+    description: 'Defina o que importa no seu dia a dia',
   },
   {
     icon: Search,
     number: '2',
     title: 'Análise',
-    description: 'Analisamos suas preferências',
+    description: 'Cruzamos com bairros, preços e infraestrutura',
   },
   {
     icon: Calculator,
     number: '3',
     title: 'Score',
-    description: 'Calculamos compatibilidade',
+    description: 'Pontuamos compatibilidade de 0 a 100',
   },
   {
     icon: Home,
     number: '4',
     title: 'Matches',
-    description: 'Receba seus imóveis ideais',
+    description: 'Receba opções ordenadas por afinidade',
   },
 ];
 
@@ -51,7 +51,7 @@ export function MatchingDiagram() {
           variants={fadeInUp}
           className="text-center text-nin-600 mb-16 max-w-xl mx-auto"
         >
-          Um processo simples e inteligente para encontrar o imóvel perfeito para você
+          Um processo simples e inteligente para encontrar o imóvel certo para você
         </motion.p>
 
         <div className="relative">

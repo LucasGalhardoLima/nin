@@ -80,7 +80,7 @@ class ApiClient {
   // Matches
   async getMatches(params?: MatchListParams) {
     const searchParams = new URLSearchParams();
-    if (params?.minScore) searchParams.set('minScore', String(params.minScore));
+    if (params?.minScore !== undefined) searchParams.set('minScore', String(params.minScore));
     if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
     if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
     if (params?.neighborhoodId) searchParams.set('neighborhoodId', params.neighborhoodId);
@@ -95,7 +95,7 @@ class ApiClient {
 
   async getGuestMatches(preferences: UpdatePreferencesDto, params?: MatchListParams) {
     const searchParams = new URLSearchParams();
-    if (params?.minScore) searchParams.set('minScore', String(params.minScore));
+    if (params?.minScore !== undefined) searchParams.set('minScore', String(params.minScore));
     if (params?.sortBy) searchParams.set('sortBy', params.sortBy);
     if (params?.sortOrder) searchParams.set('sortOrder', params.sortOrder);
     if (params?.neighborhoodId) searchParams.set('neighborhoodId', params.neighborhoodId);
@@ -233,6 +233,9 @@ export interface Property {
   images: { id: string; url: string; isPrimary: boolean }[];
   sourceUrl: string;
   sourceName: string;
+  lastScrapedAt?: string | null;
+  lastSeenAt?: string | null;
+  createdAt?: string;
 }
 
 export interface PropertyMatch {

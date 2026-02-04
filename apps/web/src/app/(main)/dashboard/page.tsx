@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useCallback, useState, useRef, useEffect } from 'react';
+import { memo, useCallback, useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -17,6 +17,7 @@ import {
   Car,
   Trees,
   Shield,
+  PawPrint,
   ExternalLink,
   Settings,
   LogOut,
@@ -31,13 +32,14 @@ import { api, PropertyMatch, User, PaginatedResponse } from '@/lib/api';
 const fetchUser = (): Promise<User | null> => api.me().catch(() => null);
 const fetchNeighborhoods = (cityId: string | null) => cityId ? api.getNeighborhoods(cityId) : Promise.resolve([]);
 
-const fetchMatches = ({ sortBy, sortOrder, neighborhoodId }: { sortBy: string; sortOrder: string; neighborhoodId: string | null }): Promise<PaginatedResponse<PropertyMatch>> => {
+const fetchMatches = ({ sortBy, sortOrder, neighborhoodId, minScore }: { sortBy: string; sortOrder: string; neighborhoodId: string | null; minScore: number }): Promise<PaginatedResponse<PropertyMatch>> => {
   const token = api.getToken();
   const params = {
     limit: 50,
     sortBy: sortBy as 'score' | 'price' | 'date',
     sortOrder: sortOrder as 'asc' | 'desc',
-    neighborhoodId: neighborhoodId || undefined
+    neighborhoodId: neighborhoodId || undefined,
+    minScore,
   };
 
   if (token) {
@@ -57,9 +59,38 @@ const priceFormatter = new Intl.NumberFormat('pt-BR', {
   minimumFractionDigits: 0,
 });
 
+const formatRelativeDate = (value?: string | null): string => {
+  if (!value) return 'Atualizado recentemente';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Atualizado recentemente';
+
+  const diffDays = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays <= 0) return 'Atualizado hoje';
+  if (diffDays === 1) return 'Atualizado ontem';
+  if (diffDays < 7) return `Atualizado há ${diffDays} dias`;
+  if (diffDays < 30) {
+    const weeks = Math.floor(diffDays / 7);
+    return `Atualizado há ${weeks} ${weeks === 1 ? 'semana' : 'semanas'}`;
+  }
+  if (diffDays < 365) {
+    const months = Math.floor(diffDays / 30);
+    return `Atualizado há ${months} ${months === 1 ? 'mês' : 'meses'}`;
+  }
+  const years = Math.floor(diffDays / 365);
+  return `Atualizado há ${years} ${years === 1 ? 'ano' : 'anos'}`;
+};
+
 // Grid configuration for virtualization
-const CARD_HEIGHT = 600; // Increased to accommodate 2-line titles and prevent overlap
+const CARD_HEIGHT = 680; // Adjusted to accommodate new filters/badges and action row
 const GAP = 24; // Gap between cards (gap-6 = 1.5rem = 24px)
+
+const defaultAmenityFilters = {
+  parking: false,
+  garden: false,
+  pool: false,
+  security: false,
+  petFriendly: false,
+};
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -67,6 +98,8 @@ export default function DashboardPage() {
   const [sortBy, setSortBy] = useState('score');
   const [sortOrder, setSortOrder] = useState('desc');
   const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState<string | null>(null);
+  const [minScore, setMinScore] = useState(40);
+  const [amenityFilters, setAmenityFilters] = useState(defaultAmenityFilters);
   const [hasMounted, setHasMounted] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -93,13 +126,27 @@ export default function DashboardPage() {
   );
 
   // SWR for matches with deduplication and caching
-  const { data: matchesData, error: matchesError, mutate: mutateMatches } = useSWR(
-    ['matches', sortBy, sortOrder, selectedNeighborhoodId],
-    () => fetchMatches({ sortBy, sortOrder, neighborhoodId: selectedNeighborhoodId }),
+  const { data: matchesData, mutate: mutateMatches } = useSWR(
+    ['matches', sortBy, sortOrder, selectedNeighborhoodId, minScore],
+    () => fetchMatches({ sortBy, sortOrder, neighborhoodId: selectedNeighborhoodId, minScore }),
     { revalidateOnFocus: false }
   );
 
   const matches = matchesData?.data ?? [];
+  const filteredMatches = useMemo(() => {
+    return matches.filter((match) => {
+      if (match.matchScore < minScore) return false;
+      if (amenityFilters.parking && !match.property.hasParking) return false;
+      if (amenityFilters.garden && !match.property.hasGarden) return false;
+      if (amenityFilters.pool && !match.property.hasPool) return false;
+      if (amenityFilters.security && !match.property.hasSecurity) return false;
+      if (amenityFilters.petFriendly && !match.property.petFriendly) return false;
+      return true;
+    });
+  }, [matches, minScore, amenityFilters]);
+
+  const totalMatches = matches.length;
+  const visibleMatches = filteredMatches.length;
   const isLoading = hasMounted && !user && !userError && api.getToken() !== null;
   const isGuest = hasMounted ? !api.getToken() : false;
 
@@ -113,7 +160,7 @@ export default function DashboardPage() {
   };
 
   const columnCount = hasMounted ? getColumnCount() : 3;
-  const rowCount = Math.ceil(matches.length / columnCount);
+  const rowCount = Math.ceil(filteredMatches.length / columnCount);
 
   // Virtualize rows (each row contains 1-3 cards depending on screen size)
   const rowVirtualizer = useVirtualizer({
@@ -233,7 +280,10 @@ export default function DashboardPage() {
               Seus matches
             </h1>
             <p className="text-nin-600">
-              {matches.length} imóveis compatíveis com seu perfil
+              {visibleMatches} imóveis compatíveis com seu perfil
+              {visibleMatches !== totalMatches && (
+                <span className="text-nin-400"> de {totalMatches}</span>
+              )}
             </p>
           </div>
 
@@ -274,6 +324,66 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Score + Amenity Filters */}
+        <div className="flex-shrink-0 max-w-7xl mx-auto px-6 pb-4 w-full">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            <div className="flex items-center gap-4 bg-white border border-nin-200 rounded-nin-sm px-4 py-3 shadow-sm">
+              <div className="flex-1 min-w-[220px]">
+                <div className="flex items-center justify-between text-xs font-semibold text-nin-500 mb-2">
+                  <span>Match mínimo</span>
+                  <span className="text-nin-700">{minScore}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={minScore}
+                  onChange={(e) => setMinScore(Number(e.target.value))}
+                  className="w-full accent-nin-500"
+                />
+              </div>
+              <div className="hidden sm:flex items-center gap-2 text-xs text-nin-500">
+                <span className="inline-flex items-center gap-1 rounded-full bg-nin-50 px-2 py-1">
+                  <SlidersHorizontal className="w-3 h-3" />
+                  Filtrando
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {[
+                { key: 'parking', label: 'Estacionamento', icon: Car },
+                { key: 'garden', label: 'Jardim', icon: Trees },
+                { key: 'pool', label: 'Piscina', icon: Heart },
+                { key: 'security', label: 'Segurança', icon: Shield },
+                { key: 'petFriendly', label: 'Pet friendly', icon: PawPrint },
+              ].map(({ key, label, icon: Icon }) => {
+                const active = amenityFilters[key as keyof typeof amenityFilters];
+                return (
+                  <button
+                    key={key}
+                    onClick={() =>
+                      setAmenityFilters((prev) => ({
+                        ...prev,
+                        [key]: !prev[key as keyof typeof amenityFilters],
+                      }))
+                    }
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                      active
+                        ? 'bg-nin-500 text-white shadow-md shadow-nin-500/20'
+                        : 'bg-white text-nin-600 border border-nin-200 hover:border-nin-300'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* Neighborhood Filter Pills */}
         {neighborhoods.length > 0 && (
           <div className="flex-shrink-0 max-w-7xl mx-auto px-6 mb-6 w-full">
@@ -303,7 +413,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {matches.length === 0 && !isLoading ? (
+        {filteredMatches.length === 0 && !isLoading ? (
           <div className="max-w-7xl mx-auto px-6 w-full">
             <div className="card text-center py-20 flex flex-col items-center">
               <div className="w-20 h-20 bg-nin-50 rounded-full flex items-center justify-center mb-6">
@@ -313,7 +423,7 @@ export default function DashboardPage() {
                 Nenhum match encontrado
               </h2>
               <p className="text-nin-500 mb-8 max-w-sm mx-auto">
-                Expandir suas preferências ou mudar de cidade pode ajudar a encontrar mais opções.
+                Ajuste o match mínimo, filtros ou preferências para encontrar mais opções.
               </p>
               <Link href="/preferences" className="btn btn-primary">
                 Editar preferências
@@ -335,7 +445,7 @@ export default function DashboardPage() {
               >
                 {rowVirtualizer.getVirtualItems().map((virtualRow) => {
                   const startIndex = virtualRow.index * columnCount;
-                  const rowMatches = matches.slice(startIndex, startIndex + columnCount);
+                  const rowMatches = filteredMatches.slice(startIndex, startIndex + columnCount);
 
                   return (
                     <div
@@ -427,6 +537,15 @@ const PropertyCard = memo(function PropertyCard({
           </h3>
         </div>
 
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-nin-500 mb-3">
+          <span className="px-2 py-0.5 rounded-full bg-nin-50 border border-nin-100">
+            {property.sourceName}
+          </span>
+          <span className="px-2 py-0.5 rounded-full bg-white border border-nin-100">
+            {formatRelativeDate(property.lastScrapedAt || property.createdAt || null)}
+          </span>
+        </div>
+
         <div className="flex items-center justify-between mb-4">
           <span className="text-xl font-bold text-nin-500">
             {priceFormatter.format(property.price)}
@@ -470,6 +589,9 @@ const PropertyCard = memo(function PropertyCard({
           )}
         </div>
 
+        <div className="text-xs text-nin-500 font-semibold mb-2">
+          Por que combina
+        </div>
         <div className="grid grid-cols-5 gap-2 mb-4">
           {Object.entries(scoreBreakdown).map(([key, value]) => {
             const labels: Record<string, string> = {
@@ -507,23 +629,15 @@ const PropertyCard = memo(function PropertyCard({
         </div>
 
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="grid grid-cols-3 gap-2">
           <button
             onClick={() => onSave(property.id)}
             disabled={loading || isFavorite}
-            className={`flex-1 btn ${isFavorite ? 'bg-sage-100 text-sage-600' : 'btn-secondary'
+            className={`col-span-2 btn ${isFavorite ? 'bg-sage-100 text-sage-600' : 'btn-secondary'
               }`}
           >
             <Heart className={`w-4 h-4 mr-1 ${isFavorite ? 'fill-current' : ''}`} />
             {isFavorite ? 'Salvo' : 'Salvar'}
-          </button>
-          <button
-            onClick={() => onHide(property.id)}
-            disabled={loading}
-            className="btn btn-secondary px-3"
-            title="Ocultar"
-          >
-            <EyeOff className="w-4 h-4" />
           </button>
           <a
             href={property.sourceUrl}
@@ -535,6 +649,14 @@ const PropertyCard = memo(function PropertyCard({
             <ExternalLink className="w-4 h-4" />
           </a>
         </div>
+        <button
+          onClick={() => onHide(property.id)}
+          disabled={loading}
+          className="btn btn-secondary w-full mt-2"
+        >
+          <EyeOff className="w-4 h-4 mr-2" />
+          Não é para mim
+        </button>
       </div>
     </div>
   );

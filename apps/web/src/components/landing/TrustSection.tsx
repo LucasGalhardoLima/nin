@@ -18,7 +18,7 @@ const trustItems = [
   {
     icon: Settings,
     title: 'Você controla',
-    description: 'Gerencie suas preferências e informações a qualquer momento',
+    description: 'Gerencie preferências e informações a qualquer momento',
   },
   {
     icon: Trash2,
@@ -47,7 +47,7 @@ export function TrustSection() {
           variants={fadeInUp}
           className="text-center text-nin-600 mb-16 max-w-xl mx-auto"
         >
-          Construímos o Nin. com segurança e transparência em mente
+          Construímos o Nin. com segurança e transparência em primeiro lugar
         </motion.p>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">

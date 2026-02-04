@@ -35,10 +35,10 @@ function StatItem({ value, prefix = '', suffix = '', label }: StatItemProps) {
 
 export function StatsSection() {
   const stats = [
-    { value: 500, prefix: '+', label: 'Famílias encontraram seu ninho' },
-    { value: 1200, prefix: '+', label: 'Imóveis analisados' },
-    { value: 98, suffix: '%', label: 'Taxa de satisfação' },
+    { value: 2, label: 'Fontes locais integradas' },
     { value: 2, label: 'Cidades atendidas' },
+    { value: 4, label: 'Etapas do match' },
+    { value: 24, suffix: 'h', label: 'Atualização diária' },
   ];
 
   return (
@@ -54,7 +54,7 @@ export function StatsSection() {
           variants={fadeInUp}
           className="font-heading text-4xl font-bold text-center text-nin-900 mb-16"
         >
-          Nossos Números
+          Nin. em números
         </motion.h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
           {stats.map((stat, index) => (
