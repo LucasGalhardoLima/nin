@@ -39,6 +39,21 @@ export class ScraperCron {
     }
   }
 
+  // Thiago Favaro scraper runs at 3:30 AM BRT
+  @Cron('30 3 * * *', {
+    timeZone: 'America/Sao_Paulo',
+  })
+  async handleThiagoFavaroScraping() {
+    this.logger.log('🏘️ Starting Thiago Favaro scraping job...');
+
+    try {
+      await this.scraperService.runScrapingJob('thiagofavaro', this.cities);
+      this.logger.log('✅ Thiago Favaro scraping completed');
+    } catch (error) {
+      this.logger.error(`❌ Thiago Favaro scraping failed: ${error.message}`, error.stack);
+    }
+  }
+
   // Cleanup stale properties runs at 4 AM BRT (after all scrapers)
   @Cron('0 4 * * *', {
     timeZone: 'America/Sao_Paulo',

@@ -359,13 +359,13 @@ export class ChavesNaMaoScraper extends BaseScraper {
 
       // Quartos
       if (!bedrooms) {
-        const match = this.extractCountByKeyword(cleanText, /(quarto|dorm)/i, 20);
+        const match = this.extractCountByKeyword(cleanText, /(quarto|dorm)/i, 10);
         if (match !== undefined) bedrooms = match;
       }
 
       // Banheiros
       if (!bathrooms) {
-        const match = this.extractCountByKeyword(cleanText, /banh/i, 20);
+        const match = this.extractCountByKeyword(cleanText, /banh/i, 10);
         if (match !== undefined) bathrooms = match;
       }
 
@@ -463,6 +463,13 @@ export class ChavesNaMaoScraper extends BaseScraper {
     return false;
   }
 
+  private clampCount(value: number | undefined, max: number): number | undefined {
+    if (value === undefined) return undefined;
+    if (value <= 0) return undefined;
+    if (value > max) return undefined;
+    return value;
+  }
+
   private async fetchDetailsFromPropertyPage(url: string): Promise<{
     bedrooms?: number;
     bathrooms?: number;
@@ -481,15 +488,21 @@ export class ChavesNaMaoScraper extends BaseScraper {
         return match ? parseInt(match[1], 10) : undefined;
       };
 
-      const bedrooms =
+      const bedrooms = this.clampCount(
         regexNumber(/\"bedrooms\"\s*:\s*\{\s*\"count\"\s*:\s*(\d+)/i) ||
-        regexNumber(/\"bedrooms\"\s*:\s*(\d+)/i);
-      const bathrooms =
+          regexNumber(/\"bedrooms\"\s*:\s*(\d+)/i),
+        10
+      );
+      const bathrooms = this.clampCount(
         regexNumber(/\"bathrooms\"\s*:\s*\{\s*\"count\"\s*:\s*(\d+)/i) ||
-        regexNumber(/\"bathrooms\"\s*:\s*(\d+)/i);
-      const parkingSpaces =
+          regexNumber(/\"bathrooms\"\s*:\s*(\d+)/i),
+        10
+      );
+      const parkingSpaces = this.clampCount(
         regexNumber(/\"garages\"\s*:\s*\{\s*\"count\"\s*:\s*(\d+)/i) ||
-        regexNumber(/\"garages\"\s*:\s*(\d+)/i);
+          regexNumber(/\"garages\"\s*:\s*(\d+)/i),
+        20
+      );
 
       const area =
         regexNumber(/\"area\"\s*:\s*\{\s*\"total\"\s*:\s*\"?(\d{2,4})\"?/i) ||

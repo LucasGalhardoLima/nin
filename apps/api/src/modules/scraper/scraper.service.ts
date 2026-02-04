@@ -3,6 +3,7 @@ import { PrismaService } from '../../common/prisma/prisma.service'; // Corrected
 import { BaseScraper } from './scrapers/base.scraper';
 import { CardinalScraper } from './scrapers/cardinali.scraper';
 import { ChavesNaMaoScraper } from './scrapers/chavesnamao.scraper';
+import { ThiagoFavaroScraper } from './scrapers/thiagofavaro.scraper';
 import { PropertyData } from './interfaces/property-data.interface';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class ScraperService {
     this.scrapers = new Map<string, BaseScraper>([
       ['cardinali', new CardinalScraper()],
       ['chavesnamao', new ChavesNaMaoScraper()],
+      ['thiagofavaro', new ThiagoFavaroScraper()],
       // Add other scrapers here as they are implemented
     ]);
   }

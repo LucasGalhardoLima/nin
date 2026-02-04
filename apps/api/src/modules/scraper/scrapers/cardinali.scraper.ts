@@ -73,6 +73,13 @@ export class CardinalScraper extends BaseScraper {
     const context = await this.browser.newContext({
       userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
     });
+    await context.route('**/*', (route) => {
+      const type = route.request().resourceType();
+      if (type === 'image' || type === 'media' || type === 'font') {
+        return route.abort();
+      }
+      return route.continue();
+    });
     
     // Add cookies to context
     await context.addCookies([
@@ -83,6 +90,7 @@ export class CardinalScraper extends BaseScraper {
     this.logger.log(`Navigating to ${url} with city ID ${cityCfg.id}`);
     
     const page = await context.newPage();
+    page.setDefaultNavigationTimeout(90000);
     await this.gotoWithRetry(page, url);
     
     // Wait for cards to load

@@ -137,7 +137,8 @@ export class MatchingService {
         const recencyBoost = this.calculateRecencyBoost(
           property.lastScrapedAt ?? property.createdAt,
         );
-        const finalScore = Math.min(100, totalScore + recencyBoost);
+        const synergyBoost = this.calculateSynergyBoost(scoreBreakdown);
+        const finalScore = Math.min(100, totalScore + recencyBoost + synergyBoost);
 
         return {
           property: this.propertiesService.toResponse(property),
@@ -412,6 +413,22 @@ export class MatchingService {
     if (diffDays <= 7) return 3;
     if (diffDays <= 14) return 1;
     return 0;
+  }
+
+  private calculateSynergyBoost(score: MatchScoreBreakdown): number {
+    let boost = 0;
+
+    if (score.budget >= 90 && score.location >= 80 && score.space >= 70) {
+      boost += 6;
+    } else if (score.budget >= 90 && score.location >= 80) {
+      boost += 3;
+    }
+
+    if (score.amenities >= 60) {
+      boost += 2;
+    }
+
+    return boost;
   }
 
   private calculateAmenityScore(

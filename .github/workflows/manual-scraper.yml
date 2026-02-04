@@ -11,6 +11,7 @@ on:
         options:
           - cardinali
           - chavesnamao
+          - thiagofavaro
       cities:
         description: 'Target Cities (comma separated)'
         required: true
