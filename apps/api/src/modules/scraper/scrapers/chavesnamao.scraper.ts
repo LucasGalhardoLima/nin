@@ -221,6 +221,8 @@ export class ChavesNaMaoScraper extends BaseScraper {
       : '';
     const price = this.extractPrice(priceText);
 
+    const title = this.cleanText(titleText);
+
     // Características (quartos, banheiros, área, vagas)
     let features = await this.extractFeatures(page, content);
 
@@ -254,7 +256,6 @@ export class ChavesNaMaoScraper extends BaseScraper {
       }
     }
 
-    const title = this.cleanText(titleText);
     const normalizedType = this.determinePropertyType(title, propertyType);
 
     if (!title || title.length < 5) {
