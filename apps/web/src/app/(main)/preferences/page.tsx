@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Home, ArrowLeft, Loader2, Save, Check } from 'lucide-react';
-import { api, UserPreferences, City, Neighborhood } from '@/lib/api';
+import { api, UserPreferences, City, Neighborhood, UpdatePreferencesDto } from '@/lib/api';
 
 const getDefaultPreferences = (): UserPreferences => ({
   id: 'guest',
@@ -50,6 +50,21 @@ const getDefaultPreferences = (): UserPreferences => ({
   },
 });
 
+const mergePreferences = (guestPrefs?: UpdatePreferencesDto | null): UserPreferences => {
+  const defaults = getDefaultPreferences();
+  return {
+    ...defaults,
+    ...guestPrefs,
+    id: 'guest',
+    family: { ...defaults.family, ...guestPrefs?.family },
+    budget: { ...defaults.budget, ...guestPrefs?.budget },
+    location: { ...defaults.location, ...guestPrefs?.location },
+    lifestyle: { ...defaults.lifestyle, ...guestPrefs?.lifestyle },
+    amenities: { ...defaults.amenities, ...guestPrefs?.amenities },
+    personal: { ...defaults.personal, ...guestPrefs?.personal },
+  };
+};
+
 export default function PreferencesPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -75,9 +90,7 @@ export default function PreferencesPage() {
           }
         } else {
           const guestPrefs = api.getGuestPreferences();
-          const prefs = guestPrefs
-            ? { ...getDefaultPreferences(), ...guestPrefs }
-            : getDefaultPreferences();
+          const prefs = mergePreferences(guestPrefs);
           setPreferences(prefs);
           if (prefs.location.targetCityId) {
             const hoods = await api.getNeighborhoods(prefs.location.targetCityId);
