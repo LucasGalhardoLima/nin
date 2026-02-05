@@ -61,6 +61,26 @@ export class MatchingService {
     return this.calculateMatchesWithPreferences(preferences, dto);
   }
 
+  async getMatchStatus(userId: string, propertyId: string) {
+    const saved = await this.prisma.savedMatch.findUnique({
+      where: {
+        userId_propertyId: {
+          userId,
+          propertyId,
+        },
+      },
+      select: {
+        isFavorite: true,
+        isHidden: true,
+      },
+    });
+
+    return {
+      isFavorite: saved?.isFavorite ?? false,
+      isHidden: saved?.isHidden ?? false,
+    };
+  }
+
   private async calculateMatchesWithPreferences(
     preferences: any,
     dto: MatchListDto,

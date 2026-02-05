@@ -31,6 +31,8 @@ export class MatchingController {
   }
 
   @Post(':id/save')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Save/favorite a property match' })
   async saveMatch(
     @Request() req: { user: { id: string } },
@@ -41,6 +43,8 @@ export class MatchingController {
   }
 
   @Post(':id/hide')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Hide a property match' })
   async hideMatch(
     @Request() req: { user: { id: string } },
@@ -48,5 +52,16 @@ export class MatchingController {
   ) {
     await this.matchingService.hideMatch(req.user.id, propertyId);
     return { success: true };
+  }
+
+  @Get(':id/status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get saved/hidden status for current user and property' })
+  async getMatchStatus(
+    @Request() req: { user: { id: string } },
+    @Param('id') propertyId: string,
+  ) {
+    return this.matchingService.getMatchStatus(req.user.id, propertyId);
   }
 }

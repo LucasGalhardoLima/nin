@@ -5,7 +5,14 @@ import { CardinalScraper } from './scrapers/cardinali.scraper';
 import { ChavesNaMaoScraper } from './scrapers/chavesnamao.scraper';
 import { ThiagoFavaroScraper } from './scrapers/thiagofavaro.scraper';
 import { PropertyData } from './interfaces/property-data.interface';
-import { cleanDescriptionForSource } from './utils/description-cleaner';
+import {
+  normalizeArea,
+  normalizeCount,
+  normalizeImages,
+  normalizePrice,
+  normalizeText,
+  sanitizeDescription,
+} from './utils/property-normalizer';
 
 @Injectable()
 export class ScraperService {
@@ -21,76 +28,10 @@ export class ScraperService {
     ]);
   }
 
-  private normalizeText(value?: string | null): string | undefined {
-    if (!value) return undefined;
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : undefined;
-  }
-
   private normalizeCityName(value?: string | null): string | undefined {
-    const text = this.normalizeText(value);
+    const text = normalizeText(value);
     if (!text) return undefined;
     return text;
-  }
-
-  private sanitizeDescription(value?: string | null): string | undefined {
-    const text = this.normalizeText(value);
-    if (!text) return undefined;
-
-    const lines = text
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean);
-
-    const phonePattern = /(\+?55)?\s*\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}/;
-    const emailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
-    const noisePattern = /(central de neg[oó]cios|fale agora|whatsapp|contato|corretor|imobili[aá]ria|creci|repita|ligue|telefone|fone|zap)/i;
-
-    const filtered = lines.filter((line) => {
-      const normalized = line.toLowerCase();
-      if (phonePattern.test(line)) return false;
-      if (emailPattern.test(line)) return false;
-      if (noisePattern.test(normalized)) return false;
-      if (/^\d{3,}$/.test(normalized)) return false;
-      return true;
-    });
-
-    const cleaned = filtered.join('\n').replace(/\s+/g, ' ').trim();
-    return cleaned.length > 0 ? cleaned : undefined;
-  }
-
-  private normalizeCount(value: number | undefined | null, max: number): number | undefined {
-    if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
-    if (value <= 0 || value > max) return undefined;
-    return Math.floor(value);
-  }
-
-  private normalizeArea(value: number | undefined | null): number | undefined {
-    if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
-    if (value < 10 || value > 2000) return undefined;
-    return value;
-  }
-
-  private normalizePrice(value: number | undefined | null): number | undefined {
-    if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
-    if (value <= 0 || value > 50_000_000) return undefined;
-    return value;
-  }
-
-  private normalizeImages(urls?: string[]): string[] {
-    if (!urls?.length) return [];
-    const seen = new Set<string>();
-    const cleaned: string[] = [];
-    for (const url of urls) {
-      const trimmed = this.normalizeText(url);
-      if (!trimmed) continue;
-      if (!/^https?:\/\//i.test(trimmed)) continue;
-      if (seen.has(trimmed)) continue;
-      seen.add(trimmed);
-      cleaned.push(trimmed);
-      if (cleaned.length >= 10) break;
-    }
-    return cleaned;
   }
 
   private dedupeProperties(properties: PropertyData[]): PropertyData[] {
@@ -98,8 +39,8 @@ export class ScraperService {
     const unique: PropertyData[] = [];
 
     for (const prop of properties) {
-      const sourceId = this.normalizeText(prop.sourceId);
-      const sourceUrl = this.normalizeText(prop.sourceUrl);
+      const sourceId = normalizeText(prop.sourceId);
+      const sourceUrl = normalizeText(prop.sourceUrl);
       const key = `${prop.scrapingSource}::${sourceId || 'no-id'}::${sourceUrl || 'no-url'}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -214,32 +155,30 @@ export class ScraperService {
    * Upsert a property into the database
    */
   private async upsertProperty(data: PropertyData): Promise<{ created: boolean }> {
-    const sourceUrl = this.normalizeText(data.sourceUrl);
+    const sourceUrl = normalizeText(data.sourceUrl);
     if (!sourceUrl) {
       throw new Error('Missing sourceUrl');
     }
 
-    const sourceId = this.normalizeText(data.sourceId);
-    const scrapingSource = this.normalizeText(data.scrapingSource);
+    const sourceId = normalizeText(data.sourceId);
+    const scrapingSource = normalizeText(data.scrapingSource);
     if (!scrapingSource) {
       throw new Error('Missing scrapingSource');
     }
 
-    const title = this.normalizeText(data.title) || 'Imóvel sem título';
+    const title = normalizeText(data.title) || 'Imóvel sem título';
     const cityName = this.normalizeCityName(data.cityName);
     if (!cityName) {
       throw new Error('Missing cityName');
     }
 
     const normalized = {
-      description: data.description
-        ? this.sanitizeDescription(cleanDescriptionForSource(data.description, scrapingSource))
-        : undefined,
-      price: this.normalizePrice(data.price),
-      bedrooms: this.normalizeCount(data.bedrooms, 10),
-      bathrooms: this.normalizeCount(data.bathrooms, 10),
-      area: this.normalizeArea(data.area),
-      images: this.normalizeImages(data.images),
+      description: sanitizeDescription(data.description, scrapingSource),
+      price: normalizePrice(data.price),
+      bedrooms: normalizeCount(data.bedrooms, 10),
+      bathrooms: normalizeCount(data.bathrooms, 10),
+      area: normalizeArea(data.area),
+      images: normalizeImages(data.images),
     };
 
     // 1. Find or create City
@@ -260,7 +199,7 @@ export class ScraperService {
 
     // 2. Find or create Neighborhood
     let neighborhoodId: string | undefined;
-    const neighborhoodName = this.normalizeText(data.neighborhoodName);
+    const neighborhoodName = normalizeText(data.neighborhoodName);
     if (neighborhoodName) {
       const neighborhood = await this.prisma.neighborhood.findFirst({
         where: { 
@@ -297,7 +236,7 @@ export class ScraperService {
         description: normalized.description ?? existing.description,
         transactionType: data.transactionType || existing.transactionType,
         propertyType: data.propertyType || existing.propertyType,
-        address: this.normalizeText(data.address) ?? existing.address,
+        address: normalizeText(data.address) ?? existing.address,
         hasParking: data.hasParking ?? existing.hasParking,
         hasPool: data.hasPool ?? existing.hasPool,
         hasGarden: data.hasGarden ?? existing.hasGarden,
@@ -364,7 +303,7 @@ export class ScraperService {
           lastSeenAt: new Date(),
           cityId: city.id,
           neighborhoodId: neighborhoodId,
-          address: this.normalizeText(data.address),
+          address: normalizeText(data.address),
           hasParking: data.hasParking,
           hasPool: data.hasPool,
           hasGarden: data.hasGarden,

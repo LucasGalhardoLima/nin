@@ -1,6 +1,7 @@
 export const cleanDescriptionForSource = (text: string, source: string): string => {
   const trimmed = text.trim();
   if (!trimmed) return '';
+  const normalizedSource = source.trim().toLowerCase();
 
   const baseNoise = [
     /central de neg[oó]cios/i,
@@ -43,7 +44,7 @@ export const cleanDescriptionForSource = (text: string, source: string): string 
     .filter((line) => !phonePattern.test(line))
     .filter((line) => !emailPattern.test(line))
     .filter((line) => !baseNoise.some((pattern) => pattern.test(line)))
-    .filter((line) => !(sourceNoise[source]?.some((pattern) => pattern.test(line)) ?? false))
+    .filter((line) => !(sourceNoise[normalizedSource]?.some((pattern) => pattern.test(line)) ?? false))
     .filter((line) => !/^\d{3,}$/.test(line));
 
   return lines.join('\n').replace(/\s+/g, ' ').trim();

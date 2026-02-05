@@ -8,8 +8,10 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       if (token) {
         localStorage.setItem('nin_token', token);
+        document.cookie = `nin_token=${encodeURIComponent(token)}; path=/; max-age=2592000; samesite=lax`;
       } else {
         localStorage.removeItem('nin_token');
+        document.cookie = 'nin_token=; path=/; max-age=0; samesite=lax';
       }
     }
   }
@@ -18,6 +20,13 @@ class ApiClient {
     if (this.token) return this.token;
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('nin_token');
+      if (!this.token) {
+        const fromCookie = document.cookie
+          .split('; ')
+          .find((entry) => entry.startsWith('nin_token='))
+          ?.split('=')[1];
+        this.token = fromCookie ? decodeURIComponent(fromCookie) : null;
+      }
     }
     return this.token;
   }
@@ -146,6 +155,10 @@ class ApiClient {
     });
   }
 
+  async getMatchStatus(propertyId: string) {
+    return this.request<MatchStatus>(`/matches/${propertyId}/status`);
+  }
+
   // Properties
   async getProperty(id: string) {
     return this.request<Property>(`/properties/${id}`);
@@ -267,6 +280,11 @@ export interface PropertyMatch {
     amenities: number;
   };
   personalTags?: string[];
+  isFavorite: boolean;
+  isHidden: boolean;
+}
+
+export interface MatchStatus {
   isFavorite: boolean;
   isHidden: boolean;
 }
