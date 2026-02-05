@@ -8,10 +8,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = trimTrailingSlash(getSiteBaseUrl());
 
   const staticRoutes: MetadataRoute.Sitemap = [
-    { url: `${baseUrl}/`, changefreq: 'weekly', priority: 1 },
-    { url: `${baseUrl}/onboarding`, changefreq: 'monthly', priority: 0.6 },
-    { url: `${baseUrl}/login`, changefreq: 'monthly', priority: 0.4 },
-    { url: `${baseUrl}/register`, changefreq: 'monthly', priority: 0.4 },
+    { url: `${baseUrl}/`, changeFrequency: 'weekly', priority: 1 },
+    { url: `${baseUrl}/onboarding`, changeFrequency: 'monthly', priority: 0.6 },
+    { url: `${baseUrl}/login`, changeFrequency: 'monthly', priority: 0.4 },
+    { url: `${baseUrl}/register`, changeFrequency: 'monthly', priority: 0.4 },
   ];
 
   try {
