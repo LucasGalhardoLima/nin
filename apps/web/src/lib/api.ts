@@ -253,6 +253,7 @@ export interface Property {
   lastScrapedAt?: string | null;
   lastSeenAt?: string | null;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface PropertyMatch {

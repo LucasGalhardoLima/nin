@@ -1,9 +1,7 @@
-'use client';
-
-import { useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import {
   ArrowLeft,
   Bath,
@@ -12,8 +10,6 @@ import {
   Car,
   GraduationCap,
   Hospital,
-  ExternalLink,
-  Heart,
   Home,
   ShoppingCart,
   MapPin,
@@ -21,7 +17,6 @@ import {
   Trees,
   Dumbbell,
   Landmark,
-  Loader2,
   PawPrint,
   Sparkles,
   Store,
@@ -29,7 +24,8 @@ import {
   Building2,
   DoorOpen,
 } from 'lucide-react';
-import { api, Property, UserPreferences, UpdatePreferencesDto } from '@/lib/api';
+import type { Property } from '@/lib/api';
+import PropertyActions from './property-actions';
 
 const priceFormatter = new Intl.NumberFormat('pt-BR', {
   style: 'currency',
@@ -58,162 +54,105 @@ const formatRelativeDate = (value?: string | null): string => {
   return `Atualizado há ${years} ${years === 1 ? 'ano' : 'anos'}`;
 };
 
-export default function PropertyDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
-  const [property, setProperty] = useState<Property | null>(null);
-  const [preferences, setPreferences] = useState<UpdatePreferencesDto | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+const getApiBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const getSiteBaseUrl = () => process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
-  useEffect(() => {
-    let active = true;
-    const load = async () => {
-      try {
-        const data = await api.getProperty(id);
-        if (active) setProperty(data);
-        if (api.getToken()) {
-          const prefs = await api.getPreferences();
-          if (active) setPreferences(prefs as UserPreferences);
-        } else {
-          const guestPrefs = api.getGuestPreferences();
-          if (active) setPreferences(guestPrefs);
-        }
-      } catch (error) {
-        console.error('Failed to load property:', error);
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
-    if (id) load();
-    return () => {
-      active = false;
-    };
-  }, [id]);
-
-  const heroImage = property?.images?.[0]?.url || null;
-  const addressText = useMemo(() => {
-    if (!property) return '';
-    const neighborhood = property.neighborhood?.name ? `${property.neighborhood.name}, ` : '';
-    return `${neighborhood}${property.city.name}`;
-  }, [property]);
-
-  const { mainDescription, proximidades } = useMemo(() => {
-    if (!property?.description) {
-      return { mainDescription: '', proximidades: [] as string[] };
-    }
-    const [beforeProx, afterProx] = property.description.split(/proximidades:\s*/i);
-    const main = (beforeProx || '').trim();
-    const rawProx = (afterProx || '')
-      .split(/,|\n|;/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-
-    const noisePattern = /(central de neg[oó]cios|thiago favaro|fale agora|corretor|imobili[aá]ria|creci|repita)/i;
-    const phonePattern = /(\+?55)?\s*\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}/;
-    const numericNoise = /\d{3,}/;
-
-    const prox = rawProx.filter((item) => {
-      const normalized = item.replace(/\s+/g, ' ').trim();
-      if (!normalized) return false;
-      if (normalized.length < 3) return false;
-      if (noisePattern.test(normalized)) return false;
-      if (phonePattern.test(normalized)) return false;
-      if (numericNoise.test(normalized)) return false;
-      return true;
+const fetchProperty = async (id: string): Promise<Property | null> => {
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/properties/${id}`, {
+      next: { revalidate: 1800 },
     });
-
-    return { mainDescription: main, proximidades: Array.from(new Set(prox)) };
-  }, [property?.description]);
-
-  const matchReasons = useMemo(() => {
-    if (!property) return [];
-    const reasons: string[] = [];
-    const prefs = preferences || {};
-
-    if (prefs.budget?.maxPrice && property.price <= prefs.budget.maxPrice) {
-      reasons.push('Dentro do orçamento definido');
-    }
-    if (prefs.family?.minBedrooms && property.bedrooms >= prefs.family.minBedrooms) {
-      reasons.push(`Tem pelo menos ${prefs.family.minBedrooms} quartos`);
-    }
-    if (prefs.family?.minBathrooms && property.bathrooms >= prefs.family.minBathrooms) {
-      reasons.push(`Atende ao mínimo de banheiros`);
-    }
-    if (prefs.amenities?.needsSecurity && property.hasSecurity) {
-      reasons.push('Segurança 24h disponível');
-    }
-    if (prefs.amenities?.needsGym && property.hasGym) {
-      reasons.push('Academia disponível no condomínio');
-    }
-    if (prefs.amenities?.needsPlayground && property.hasPlayground) {
-      reasons.push('Playground para a rotina da família');
-    }
-    if (prefs.amenities?.needsGreenArea && property.hasGreenArea) {
-      reasons.push('Área verde para relaxar');
-    }
-    if (prefs.lifestyle?.commerceProximityWeight && prefs.lifestyle.commerceProximityWeight >= 7 && proximidades.length > 0) {
-      reasons.push('Comércio e serviços próximos');
-    }
-    if (prefs.personal?.prefersFamilyRhythm && (property.hasPlayground || property.hasGreenArea)) {
-      reasons.push('Bom para rotina familiar');
-    }
-    if (prefs.personal?.prefersWorkFromHome && property.area && property.area >= 90) {
-      reasons.push('Espaço confortável para home office');
-    }
-    if (prefs.personal?.prefersQuietRestful && property.neighborhood) {
-      reasons.push('Bairro com perfil mais tranquilo');
-    }
-
-    if (reasons.length === 0) {
-      if (property.area && property.area >= 80) reasons.push('Boa metragem para o dia a dia');
-      if (property.hasGreenArea || property.hasGarden) reasons.push('Contato com área verde');
-      if (property.hasGym) reasons.push('Academia no condomínio');
-      if (proximidades.length > 0) reasons.push('Comércio próximo');
-    }
-
-    return reasons.slice(0, 5);
-  }, [property, preferences, proximidades]);
-
-  const handleSave = async () => {
-    if (!property) return;
-    if (!api.getToken()) {
-      router.push('/register');
-      return;
-    }
-    setSaving(true);
-    try {
-      await api.saveMatch(property.id);
-      setSaved(true);
-    } catch (error) {
-      console.error('Failed to save property:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-nin-500" />
-      </div>
-    );
+    if (!response.ok) return null;
+    return response.json();
+  } catch {
+    return null;
   }
+};
 
+const fetchRelated = async (
+  cityId: string,
+  transactionType: Property['transactionType'],
+  excludeId: string,
+): Promise<Property[]> => {
+  try {
+    const params = new URLSearchParams();
+    if (cityId && cityId !== 'all') params.set('cityId', cityId);
+    if (transactionType) params.set('transactionType', transactionType);
+    params.set('limit', '8');
+    params.set('page', '1');
+
+    const response = await fetch(`${getApiBaseUrl()}/properties?${params.toString()}`, {
+      next: { revalidate: 1800 },
+    });
+    if (!response.ok) return [];
+    const data = await response.json();
+    const list = Array.isArray(data?.data) ? data.data : [];
+    return list.filter((item: Property) => item.id !== excludeId).slice(0, 6);
+  } catch {
+    return [];
+  }
+};
+
+export async function generateMetadata({
+  params,
+}: {
+  params: { id: string };
+}): Promise<Metadata> {
+  const property = await fetchProperty(params.id);
   if (!property) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-nin-600">
-        <p>Imóvel não encontrado.</p>
-        <Link href="/dashboard" className="btn btn-primary">
-          Voltar ao dashboard
-        </Link>
-      </div>
-    );
+    return {
+      title: 'Imóvel não encontrado | Nin.',
+    };
   }
+
+  const title = `${property.title} | Nin.`;
+  const description = `Veja detalhes deste imóvel em ${property.city.name} com ${property.bedrooms} dormitórios e ${property.bathrooms} banheiros. Atualizado recentemente no Nin.`;
+  const image = property.images?.[0]?.url;
+
+  const canonical = `${trimTrailingSlash(getSiteBaseUrl())}/imovel/${property.id}`;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical,
+    },
+    openGraph: {
+      title,
+      description,
+      url: canonical,
+      images: image ? [{ url: image }] : [],
+    },
+  };
+}
+
+export default async function PropertyDetailPage({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const property = await fetchProperty(params.id);
+  if (!property) notFound();
+  let related = await fetchRelated(property.city.id, property.transactionType, property.id);
+  if (related.length === 0) {
+    related = await fetchRelated('all', property.transactionType, property.id);
+  }
+
+  const heroImage = property.images?.[0]?.url || null;
+  const addressText = `${property.neighborhood?.name ? `${property.neighborhood.name}, ` : ''}${property.city.name}`;
+
+  const { mainDescription, proximidades } = parseDescription(property.description ?? '');
+  const reasons = buildHighlightReasons(property, proximidades);
+
+  const jsonLd = buildJsonLd(property);
 
   return (
     <div className="min-h-screen bg-nin-50/40">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <div className="max-w-6xl mx-auto px-6 py-10">
         <Link href="/dashboard" className="inline-flex items-center text-nin-600 hover:text-nin-700 mb-6">
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -268,7 +207,6 @@ export default function PropertyDetailPage() {
                   className="btn btn-secondary"
                 >
                   Ver no site original
-                  <ExternalLink className="w-4 h-4 ml-2" />
                 </a>
               </div>
 
@@ -342,30 +280,54 @@ export default function PropertyDetailPage() {
               proximidades={proximidades}
               property={property}
             />
+
+            {related.length > 0 && (
+              <div className="card">
+                <h2 className="font-heading text-lg font-semibold text-nin-900 mb-4">
+                  Outros imóveis em {property.city.name}
+                </h2>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {related.map((item) => (
+                    <Link
+                      key={item.id}
+                      href={`/imovel/${item.id}`}
+                      className="rounded-nin-sm border border-nin-100 bg-white p-3 hover:border-nin-300 transition-colors"
+                    >
+                      <div className="flex gap-3">
+                        <div className="relative w-20 h-16 rounded-nin-sm overflow-hidden bg-nin-50">
+                          {item.images?.[0]?.url ? (
+                            <Image
+                              src={item.images[0].url}
+                              alt={item.title}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : null}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-nin-900 line-clamp-2">
+                            {item.title}
+                          </p>
+                          <p className="text-xs text-nin-500 mt-1">
+                            {priceFormatter.format(item.price)}
+                            {item.transactionType === 'RENT' ? ' /mês' : ''}
+                          </p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <aside className="space-y-6">
-            <div className="card">
-              <h2 className="font-heading text-lg font-semibold text-nin-900 mb-2">
-                Pronto para agir?
-              </h2>
-              <p className="text-nin-600 text-sm mb-4">
-                Salve este imóvel e acompanhe atualizações direto no Nin.
-              </p>
-              <button
-                onClick={handleSave}
-                disabled={saving || saved}
-                className="btn btn-primary w-full"
-              >
-                <Heart className={`w-4 h-4 mr-2 ${saved ? 'fill-current' : ''}`} />
-                {saved ? 'Salvo' : saving ? 'Salvando...' : 'Salvar imóvel'}
-              </button>
-            </div>
+            <PropertyActions propertyId={property.id} />
 
             <div className="card">
               <div className="flex items-center justify-between mb-2">
                 <h3 className="font-heading text-base font-semibold text-nin-900">
-                  Por que combina com você
+                  Por que este imóvel se destaca
                 </h3>
                 <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-nin-900 text-white">
                   <Sparkles className="w-3 h-3" />
@@ -373,18 +335,18 @@ export default function PropertyDetailPage() {
                 </span>
               </div>
               <p className="text-nin-500 text-xs mb-3">
-                Sugestões geradas automaticamente a partir do anúncio e do seu perfil.
+                Insights gerados automaticamente a partir do anúncio.
               </p>
               <ul className="space-y-2 text-sm text-nin-700">
-                {matchReasons.map((reason) => (
+                {reasons.map((reason) => (
                   <li key={reason} className="flex items-start gap-2">
                     <span className="mt-1 h-1.5 w-1.5 rounded-full bg-nin-500" />
                     <span>{reason}</span>
                   </li>
                 ))}
-                {matchReasons.length === 0 && (
+                {reasons.length === 0 && (
                   <li className="text-nin-500">
-                    Ainda não temos informações suficientes para explicar este match.
+                    Ainda não temos informações suficientes para destacar este imóvel.
                   </li>
                 )}
               </ul>
@@ -396,7 +358,172 @@ export default function PropertyDetailPage() {
   );
 }
 
-// Description & proximity details
+const parseDescription = (description: string) => {
+  const [beforeProx, afterProx] = description.split(/proximidades:\s*/i);
+  const main = (beforeProx || '').trim();
+  const rawProx = (afterProx || '')
+    .split(/,|\n|;/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+  const noisePattern = /(central de neg[oó]cios|thiago favaro|fale agora|corretor|imobili[aá]ria|creci|repita)/i;
+  const phonePattern = /(\+?55)?\s*\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}/;
+  const numericNoise = /\d{3,}/;
+
+  const prox = rawProx.filter((item) => {
+    const normalized = item.replace(/\s+/g, ' ').trim();
+    if (!normalized) return false;
+    if (normalized.length < 3) return false;
+    if (noisePattern.test(normalized)) return false;
+    if (phonePattern.test(normalized)) return false;
+    if (numericNoise.test(normalized)) return false;
+    return true;
+  });
+
+  return { mainDescription: main, proximidades: Array.from(new Set(prox)) };
+};
+
+const buildHighlightReasons = (property: Property, proximidades: string[]) => {
+  const reasons: string[] = [];
+  if (property.hasSecurity) reasons.push('Condomínio com segurança e controle de acesso.');
+  if (property.hasGym) reasons.push('Academia disponível no condomínio.');
+  if (property.hasPlayground) reasons.push('Playground ideal para rotina familiar.');
+  if (property.hasGreenArea) reasons.push('Área verde para relaxar e respirar melhor.');
+  if (property.area && property.area >= 100) reasons.push('Boa metragem para o dia a dia.');
+  if (property.bedrooms >= 3) reasons.push('Espaço confortável para a família.');
+  if (proximidades.length > 0) reasons.push('Comércio e serviços próximos.');
+  return reasons.slice(0, 4);
+};
+
+const buildJsonLd = (property: Property) => ({
+  '@context': 'https://schema.org',
+  '@type': 'RealEstateListing',
+  name: property.title,
+  url: `${trimTrailingSlash(getSiteBaseUrl())}/imovel/${property.id}`,
+  image: property.images?.[0]?.url || undefined,
+  description: property.description || property.title,
+  offers: {
+    '@type': 'Offer',
+    price: property.price,
+    priceCurrency: 'BRL',
+    availability: 'https://schema.org/InStock',
+  },
+  address: {
+    '@type': 'PostalAddress',
+    addressLocality: property.city.name,
+    addressRegion: property.city.state,
+    addressCountry: 'BR',
+  },
+});
+
+const getProximityMeta = (value: string) => {
+  const text = value.toLowerCase();
+  if (/farm[aá]cia/.test(text)) return { icon: Hospital, label: value };
+  if (/hospital|cl[ií]nica|upa|posto de sa[úu]de/.test(text)) return { icon: Hospital, label: value };
+  if (/escola|col[eé]gio|universidade|creche/.test(text)) return { icon: GraduationCap, label: value };
+  if (/supermercado|mercado|mercearia/.test(text)) return { icon: ShoppingCart, label: value };
+  if (/padaria|loja|shopping|com[eé]rcio|servi[cç]o/.test(text)) return { icon: Store, label: value };
+  if (/restaurante|bar|lanchonete/.test(text)) return { icon: Utensils, label: value };
+  if (/parque|bosque|[áa]rea verde|pra[cç]a/.test(text)) return { icon: Trees, label: value };
+  if (/transporte|[ôo]nibus|terminal|ponto/.test(text)) return { icon: Bus, label: value };
+  if (/banco|cart[oó]rio/.test(text)) return { icon: Landmark, label: value };
+  return { icon: MapPin, label: value };
+};
+
+const formatItem = (value: string) => {
+  const cleaned = value.replace(/^(um|uma|o|a|os|as)\s+/i, '').replace(/\s+/g, ' ').trim();
+  if (!cleaned) return value;
+
+  const lowerWords = new Set([
+    'de', 'da', 'do', 'das', 'dos', 'e', 'em', 'para', 'com', 'sem', 'ao', 'aos', 'à', 'às',
+    'no', 'na', 'nos', 'nas', 'por', 'sobre',
+  ]);
+
+  const normalizeWord = (word: string, index: number) => {
+    const plain = word.replace(/[^\p{L}\p{N}]/gu, '');
+    if (!plain) return word;
+
+    const isAcronym = plain.length <= 5 && plain === plain.toUpperCase();
+    if (isAcronym) return word;
+
+    const hasMixedDigits = /\d/.test(plain) && /[a-zA-ZÀ-ÿ]/.test(plain);
+    if (hasMixedDigits) return word;
+
+    const lower = plain.toLowerCase();
+    if (index !== 0 && lowerWords.has(lower)) {
+      return word.toLowerCase();
+    }
+
+    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+  };
+
+  const words = cleaned.split(' ').map((word, index) => normalizeWord(word, index));
+
+  const overrides = [
+    { pattern: /\barea\b/gi, replacement: 'Área' },
+    { pattern: /\bgourmet\b/gi, replacement: 'Gourmet' },
+    { pattern: /\bhome office\b/gi, replacement: 'Home Office' },
+    { pattern: /\bbanheiro social\b/gi, replacement: 'Banheiro Social' },
+    { pattern: /\bbanheiro privativo\b/gi, replacement: 'Banheiro Privativo' },
+    { pattern: /\bbanheiro (?:de )?servi[cç]o\b/gi, replacement: 'Banheiro de Serviço' },
+    { pattern: /\blavabo\b/gi, replacement: 'Lavabo' },
+    { pattern: /\bsu[ií]te master\b/gi, replacement: 'Suíte Master' },
+    { pattern: /\bsu[ií]te\b/gi, replacement: 'Suíte' },
+    { pattern: /\bcloset\b/gi, replacement: 'Closet' },
+    { pattern: /\bservi[cç]o\b/gi, replacement: 'Serviço' },
+    { pattern: /\bvaranda gourmet\b/gi, replacement: 'Varanda Gourmet' },
+    { pattern: /\bvaranda\b/gi, replacement: 'Varanda' },
+    { pattern: /\bsacada\b/gi, replacement: 'Sacada' },
+    { pattern: /\barea verde\b/gi, replacement: 'Área Verde' },
+    { pattern: /\barea de churrasco\b/gi, replacement: 'Área de Churrasco' },
+    { pattern: /\bchurrasqueira\b/gi, replacement: 'Churrasqueira' },
+    { pattern: /\barea externa\b/gi, replacement: 'Área Externa' },
+    { pattern: /\barea de servi[cç]o\b/gi, replacement: 'Área de Serviço' },
+    { pattern: /\blavanderia\b/gi, replacement: 'Lavanderia' },
+    { pattern: /\bcozinha planejada\b/gi, replacement: 'Cozinha Planejada' },
+    { pattern: /\bcozinha com arm[aá]rios\b/gi, replacement: 'Cozinha com Armários' },
+    { pattern: /\barm[aá]rios planejados\b/gi, replacement: 'Armários Planejados' },
+    { pattern: /\bmoveis planejados\b/gi, replacement: 'Móveis Planejados' },
+    { pattern: /\bsala de jantar\b/gi, replacement: 'Sala de Jantar' },
+    { pattern: /\bsala de estar\b/gi, replacement: 'Sala de Estar' },
+    { pattern: /\bsala de tv\b/gi, replacement: 'Sala de TV' },
+    { pattern: /\bsala para 2 ambientes\b/gi, replacement: 'Sala para 2 Ambientes' },
+    { pattern: /\bsala dois ambientes\b/gi, replacement: 'Sala para 2 Ambientes' },
+    { pattern: /\bquintal\b/gi, replacement: 'Quintal' },
+    { pattern: /\bquintal gramado\b/gi, replacement: 'Quintal Gramado' },
+    { pattern: /\bjardim\b/gi, replacement: 'Jardim' },
+    { pattern: /\bgaragem coberta\b/gi, replacement: 'Garagem Coberta' },
+    { pattern: /\bgaragem\b/gi, replacement: 'Garagem' },
+    { pattern: /\bvaga\b/gi, replacement: 'Vaga' },
+    { pattern: /\bportaria 24 horas\b/gi, replacement: 'Portaria 24 Horas' },
+    { pattern: /\bcondominio\b/gi, replacement: 'Condomínio' },
+    { pattern: /\bplayground\b/gi, replacement: 'Playground' },
+    { pattern: /\bacademia ao ar livre\b/gi, replacement: 'Academia ao Ar Livre' },
+    { pattern: /\bacademia\b/gi, replacement: 'Academia' },
+    { pattern: /\barea de lazer\b/gi, replacement: 'Área de Lazer' },
+    { pattern: /\bquadra\b/gi, replacement: 'Quadra' },
+    { pattern: /\bsal[aã]o de festas\b/gi, replacement: 'Salão de Festas' },
+    { pattern: /\bespa[cç]o gourmet\b/gi, replacement: 'Espaço Gourmet' },
+    { pattern: /\bbrinquedoteca\b/gi, replacement: 'Brinquedoteca' },
+    { pattern: /\bbosque\b/gi, replacement: 'Bosque' },
+    { pattern: /\bparque\b/gi, replacement: 'Parque' },
+    { pattern: /\bárea privativa\b/gi, replacement: 'Área Privativa' },
+    { pattern: /\bbanheiro social\b/gi, replacement: 'Banheiro Social' },
+    { pattern: /\bdespensa\b/gi, replacement: 'Despensa' },
+    { pattern: /\bdep[oó]sito\b/gi, replacement: 'Depósito' },
+    { pattern: /\bescrit[oó]rio\b/gi, replacement: 'Escritório' },
+    { pattern: /\bmezanino\b/gi, replacement: 'Mezanino' },
+    { pattern: /\bterra[cç]o\b/gi, replacement: 'Terraço' },
+  ];
+
+  let formatted = words.join(' ');
+  for (const rule of overrides) {
+    formatted = formatted.replace(rule.pattern, rule.replacement);
+  }
+
+  return formatted;
+};
+
 function DescriptionBlocks({
   mainDescription,
   proximidades,
@@ -406,11 +533,7 @@ function DescriptionBlocks({
   proximidades: string[];
   property: Property;
 }) {
-  const summary = mainDescription
-    ? `${mainDescription}`.replace(/\s+/g, ' ').trim()
-    : '';
-  const shortSummary = summary.length > 280 ? `${summary.slice(0, 277)}...` : summary;
-
+  const summary = mainDescription ? `${mainDescription}`.replace(/\s+/g, ' ').trim() : '';
   const normalizedSummary = summary
     .replace(/Condom[ií]nio oferece:\s*/gi, 'Condomínio oferece - ')
     .replace(/Portaria\s*\d+\s*horas?/gi, 'Portaria 24 horas');
@@ -471,35 +594,15 @@ function DescriptionBlocks({
     if (!target.includes(value)) target.push(value);
   };
 
-  // Enrich sections using structured flags when text is sparse
-  if (property.hasSecurity) {
-    pushUnique(sections.seguranca, 'Portaria 24 horas');
-  }
-  if (property.hasGarden) {
-    pushUnique(sections.comodidades, 'Jardim/Quintal');
-  }
-  if (property.hasPool) {
-    pushUnique(sections.comodidades, 'Piscina');
-  }
-  if (property.hasGym) {
-    pushUnique(sections.comodidades, 'Academia');
-  }
-  if (property.hasPlayground) {
-    pushUnique(sections.comodidades, 'Playground');
-  }
-  if (property.hasGreenArea) {
-    pushUnique(sections.comodidades, 'Área verde');
-  }
-  if (property.hasParking) {
-    pushUnique(sections.comodidades, 'Garagem');
-  }
-
-  if (property.bedrooms > 0) {
-    pushUnique(sections.ambientes, `${property.bedrooms} dormitórios`);
-  }
-  if (property.bathrooms > 0) {
-    pushUnique(sections.ambientes, `${property.bathrooms} banheiros`);
-  }
+  if (property.hasSecurity) pushUnique(sections.seguranca, 'Portaria 24 horas');
+  if (property.hasGarden) pushUnique(sections.comodidades, 'Jardim/Quintal');
+  if (property.hasPool) pushUnique(sections.comodidades, 'Piscina');
+  if (property.hasGym) pushUnique(sections.comodidades, 'Academia');
+  if (property.hasPlayground) pushUnique(sections.comodidades, 'Playground');
+  if (property.hasGreenArea) pushUnique(sections.comodidades, 'Área verde');
+  if (property.hasParking) pushUnique(sections.comodidades, 'Garagem');
+  if (property.bedrooms > 0) pushUnique(sections.ambientes, `${property.bedrooms} dormitórios`);
+  if (property.bathrooms > 0) pushUnique(sections.ambientes, `${property.bathrooms} banheiros`);
 
   const normalizeItem = (value: string) =>
     value
@@ -510,100 +613,6 @@ function DescriptionBlocks({
       .replace(/[^\w\s]/g, '')
       .replace(/\s+/g, ' ')
       .trim();
-
-  const formatItem = (value: string) => {
-    const cleaned = value.replace(/^(um|uma|o|a|os|as)\s+/i, '').replace(/\s+/g, ' ').trim();
-    if (!cleaned) return value;
-
-    const lowerWords = new Set([
-      'de', 'da', 'do', 'das', 'dos', 'e', 'em', 'para', 'com', 'sem', 'ao', 'aos', 'à', 'às',
-      'no', 'na', 'nos', 'nas', 'por', 'sobre',
-    ]);
-
-    const normalizeWord = (word: string, index: number) => {
-      const plain = word.replace(/[^\p{L}\p{N}]/gu, '');
-      if (!plain) return word;
-
-      const isAcronym = plain.length <= 5 && plain === plain.toUpperCase();
-      if (isAcronym) return word;
-
-      const hasMixedDigits = /\d/.test(plain) && /[a-zA-ZÀ-ÿ]/.test(plain);
-      if (hasMixedDigits) return word;
-
-      const lower = plain.toLowerCase();
-      if (index !== 0 && lowerWords.has(lower)) {
-        return word.toLowerCase();
-      }
-
-      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-    };
-
-    const words = cleaned.split(' ').map((word, index) => normalizeWord(word, index));
-
-    const overrides = [
-      { pattern: /\barea\b/gi, replacement: 'Área' },
-      { pattern: /\bgourmet\b/gi, replacement: 'Gourmet' },
-      { pattern: /\bhome office\b/gi, replacement: 'Home Office' },
-      { pattern: /\bbanheiro social\b/gi, replacement: 'Banheiro Social' },
-      { pattern: /\bbanheiro privativo\b/gi, replacement: 'Banheiro Privativo' },
-      { pattern: /\bbanheiro (?:de )?servi[cç]o\b/gi, replacement: 'Banheiro de Serviço' },
-      { pattern: /\blavabo\b/gi, replacement: 'Lavabo' },
-      { pattern: /\bsu[ií]te master\b/gi, replacement: 'Suíte Master' },
-      { pattern: /\bsu[ií]te\b/gi, replacement: 'Suíte' },
-      { pattern: /\bcloset\b/gi, replacement: 'Closet' },
-      { pattern: /\bservi[cç]o\b/gi, replacement: 'Serviço' },
-      { pattern: /\bvaranda gourmet\b/gi, replacement: 'Varanda Gourmet' },
-      { pattern: /\bvaranda\b/gi, replacement: 'Varanda' },
-      { pattern: /\bsacada\b/gi, replacement: 'Sacada' },
-      { pattern: /\barea verde\b/gi, replacement: 'Área Verde' },
-      { pattern: /\barea de churrasco\b/gi, replacement: 'Área de Churrasco' },
-      { pattern: /\bchurrasqueira\b/gi, replacement: 'Churrasqueira' },
-      { pattern: /\barea externa\b/gi, replacement: 'Área Externa' },
-      { pattern: /\barea de servi[cç]o\b/gi, replacement: 'Área de Serviço' },
-      { pattern: /\blavanderia\b/gi, replacement: 'Lavanderia' },
-      { pattern: /\bcozinha planejada\b/gi, replacement: 'Cozinha Planejada' },
-      { pattern: /\bcozinha com arm[aá]rios\b/gi, replacement: 'Cozinha com Armários' },
-      { pattern: /\barm[aá]rios planejados\b/gi, replacement: 'Armários Planejados' },
-      { pattern: /\bmoveis planejados\b/gi, replacement: 'Móveis Planejados' },
-      { pattern: /\bsala de jantar\b/gi, replacement: 'Sala de Jantar' },
-      { pattern: /\bsala de estar\b/gi, replacement: 'Sala de Estar' },
-      { pattern: /\bsala de tv\b/gi, replacement: 'Sala de TV' },
-      { pattern: /\bsala para 2 ambientes\b/gi, replacement: 'Sala para 2 Ambientes' },
-      { pattern: /\bsala dois ambientes\b/gi, replacement: 'Sala para 2 Ambientes' },
-      { pattern: /\bquintal\b/gi, replacement: 'Quintal' },
-      { pattern: /\bquintal gramado\b/gi, replacement: 'Quintal Gramado' },
-      { pattern: /\bjardim\b/gi, replacement: 'Jardim' },
-      { pattern: /\bgaragem coberta\b/gi, replacement: 'Garagem Coberta' },
-      { pattern: /\bgaragem\b/gi, replacement: 'Garagem' },
-      { pattern: /\bvaga\b/gi, replacement: 'Vaga' },
-      { pattern: /\bportaria 24 horas\b/gi, replacement: 'Portaria 24 Horas' },
-      { pattern: /\bcondominio\b/gi, replacement: 'Condomínio' },
-      { pattern: /\bplayground\b/gi, replacement: 'Playground' },
-      { pattern: /\bacademia ao ar livre\b/gi, replacement: 'Academia ao Ar Livre' },
-      { pattern: /\bacademia\b/gi, replacement: 'Academia' },
-      { pattern: /\barea de lazer\b/gi, replacement: 'Área de Lazer' },
-      { pattern: /\bquadra\b/gi, replacement: 'Quadra' },
-      { pattern: /\bsal[aã]o de festas\b/gi, replacement: 'Salão de Festas' },
-      { pattern: /\bespa[cç]o gourmet\b/gi, replacement: 'Espaço Gourmet' },
-      { pattern: /\bbrinquedoteca\b/gi, replacement: 'Brinquedoteca' },
-      { pattern: /\bbosque\b/gi, replacement: 'Bosque' },
-      { pattern: /\bparque\b/gi, replacement: 'Parque' },
-      { pattern: /\bárea privativa\b/gi, replacement: 'Área Privativa' },
-      { pattern: /\bbanheiro social\b/gi, replacement: 'Banheiro Social' },
-      { pattern: /\bdespensa\b/gi, replacement: 'Despensa' },
-      { pattern: /\bdep[oó]sito\b/gi, replacement: 'Depósito' },
-      { pattern: /\bescrit[oó]rio\b/gi, replacement: 'Escritório' },
-      { pattern: /\bmezanino\b/gi, replacement: 'Mezanino' },
-      { pattern: /\bterra[cç]o\b/gi, replacement: 'Terraço' },
-    ];
-
-    let formatted = words.join(' ');
-    for (const rule of overrides) {
-      formatted = formatted.replace(rule.pattern, rule.replacement);
-    }
-
-    return formatted;
-  };
 
   const uniqueByNormalized = (items: string[]) => {
     const byKey = new Map<string, string>();
@@ -639,20 +648,6 @@ function DescriptionBlocks({
   sections.ambientes = removeCrossDuplicates(sections.comodidades, sections.ambientes);
   sections.ambientes = removeCrossDuplicates(sections.seguranca, sections.ambientes);
 
-  const getProximityMeta = (value: string) => {
-    const text = value.toLowerCase();
-    if (/farm[aá]cia/.test(text)) return { icon: Hospital, label: value };
-    if (/hospital|cl[ií]nica|upa|posto de sa[úu]de/.test(text)) return { icon: Hospital, label: value };
-    if (/escola|col[eé]gio|universidade|creche/.test(text)) return { icon: GraduationCap, label: value };
-    if (/supermercado|mercado|mercearia/.test(text)) return { icon: ShoppingCart, label: value };
-    if (/padaria|loja|shopping|com[eé]rcio|servi[cç]o/.test(text)) return { icon: Store, label: value };
-    if (/restaurante|bar|lanchonete/.test(text)) return { icon: Utensils, label: value };
-    if (/parque|bosque|[áa]rea verde|pra[cç]a/.test(text)) return { icon: Trees, label: value };
-    if (/transporte|[ôo]nibus|terminal|ponto/.test(text)) return { icon: Bus, label: value };
-    if (/banco|cart[oó]rio/.test(text)) return { icon: Landmark, label: value };
-    return { icon: MapPin, label: value };
-  };
-
   return (
     <div className="card">
       <div className="flex items-center justify-between mb-4">
@@ -673,15 +668,15 @@ function DescriptionBlocks({
                 Segurança
               </div>
               <div className="flex flex-wrap gap-2">
-          {sections.seguranca.map((item) => (
-            <span
-              key={item}
-              className="px-2.5 py-1 rounded-full text-xs bg-nin-100 text-nin-700 border border-nin-200"
-            >
-              {formatItem(item)}
-            </span>
-          ))}
-        </div>
+                {sections.seguranca.map((item) => (
+                  <span
+                    key={item}
+                    className="px-2.5 py-1 rounded-full text-xs bg-nin-100 text-nin-700 border border-nin-200"
+                  >
+                    {formatItem(item)}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
@@ -692,15 +687,15 @@ function DescriptionBlocks({
                 Comodidades
               </div>
               <div className="flex flex-wrap gap-2">
-              {sections.comodidades.map((item) => (
-                <span
-                  key={item}
-                  className="px-2.5 py-1 rounded-full text-xs bg-nin-100 text-nin-700 border border-nin-200"
-                >
-                  {formatItem(item)}
-                </span>
-              ))}
-            </div>
+                {sections.comodidades.map((item) => (
+                  <span
+                    key={item}
+                    className="px-2.5 py-1 rounded-full text-xs bg-nin-100 text-nin-700 border border-nin-200"
+                  >
+                    {formatItem(item)}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
@@ -711,15 +706,15 @@ function DescriptionBlocks({
                 Condomínio oferece
               </div>
               <div className="flex flex-wrap gap-2">
-              {sections.condominio.map((item) => (
-                <span
-                  key={item}
-                  className="px-2.5 py-1 rounded-full text-xs bg-nin-100 text-nin-700 border border-nin-200"
-                >
-                  {formatItem(item)}
-                </span>
-              ))}
-            </div>
+                {sections.condominio.map((item) => (
+                  <span
+                    key={item}
+                    className="px-2.5 py-1 rounded-full text-xs bg-nin-100 text-nin-700 border border-nin-200"
+                  >
+                    {formatItem(item)}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
 
@@ -730,15 +725,15 @@ function DescriptionBlocks({
                 Ambientes & cômodos
               </div>
               <div className="flex flex-wrap gap-2">
-              {sections.ambientes.map((item) => (
-                <span
-                  key={item}
-                  className="px-2.5 py-1 rounded-full text-xs bg-nin-100 text-nin-700 border border-nin-200"
-                >
-                  {formatItem(item)}
-                </span>
-              ))}
-            </div>
+                {sections.ambientes.map((item) => (
+                  <span
+                    key={item}
+                    className="px-2.5 py-1 rounded-full text-xs bg-nin-100 text-nin-700 border border-nin-200"
+                  >
+                    {formatItem(item)}
+                  </span>
+                ))}
+              </div>
             </div>
           )}
         </div>

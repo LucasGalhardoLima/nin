@@ -132,6 +132,7 @@ export class PropertiesService {
       lastScrapedAt: property.lastScrapedAt,
       lastSeenAt: property.lastSeenAt,
       createdAt: property.createdAt,
+      updatedAt: property.updatedAt,
     };
   }
 }

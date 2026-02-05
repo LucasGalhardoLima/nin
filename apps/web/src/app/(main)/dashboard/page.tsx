@@ -21,7 +21,6 @@ import {
   Shield,
   PawPrint,
   AlertTriangle,
-  ExternalLink,
   Settings,
   LogOut,
   Loader2,
@@ -738,54 +737,53 @@ const PropertyCard = memo(function PropertyCard({
             );
           })}
         </div>
-        {match.personalTags && match.personalTags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {match.personalTags.map((tag) => (
-              <span
-                key={tag}
-                className="text-[11px] px-2 py-1 rounded-full bg-nin-50 text-nin-700 border border-nin-100"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="min-h-[32px] mb-4">
+          {match.personalTags && match.personalTags.length > 0 && (
+            <div className="flex flex-nowrap gap-2 overflow-hidden">
+              {match.personalTags.slice(0, 1).map((tag) => (
+                <span
+                  key={tag}
+                  className="text-[11px] px-2 py-1 rounded-full bg-nin-50 text-nin-700 border border-nin-100 whitespace-nowrap"
+                >
+                  {tag}
+                </span>
+              ))}
+              {match.personalTags.length > 1 && (
+                <span className="text-[11px] px-2 py-1 rounded-full bg-nin-100 text-nin-600 border border-nin-200 whitespace-nowrap">
+                  +{match.personalTags.length - 1}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <button
             onClick={() => onSave(property.id)}
             disabled={loading || isFavorite}
-            className={`col-span-2 btn ${isFavorite ? 'bg-sage-100 text-sage-600' : 'btn-secondary'
-              }`}
+            className={`btn text-sm px-3 py-2 whitespace-nowrap ${
+              isFavorite ? 'bg-sage-100 text-sage-600' : 'btn-secondary'
+            }`}
           >
             <Heart className={`w-4 h-4 mr-1 ${isFavorite ? 'fill-current' : ''}`} />
             {isFavorite ? 'Salvo' : 'Salvar'}
           </button>
-          <a
-            href={property.sourceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-secondary px-3"
-            title="Ver original"
-          >
-            <ExternalLink className="w-4 h-4" />
-          </a>
-        </div>
           <button
             onClick={() => onHide(property.id)}
             disabled={loading}
-            className="btn btn-secondary w-full mt-2"
+            className="btn btn-secondary text-sm px-3 py-2 whitespace-nowrap"
           >
             <EyeOff className="w-4 h-4 mr-2" />
             Não é para mim
           </button>
-          <Link
-            href={`/imovel/${property.id}`}
-            className="btn btn-primary w-full mt-2"
-          >
-            Ver detalhes
-          </Link>
+        </div>
+        <Link
+          href={`/imovel/${property.id}`}
+          className="btn btn-primary w-full mt-2"
+        >
+          Ver detalhes
+        </Link>
         </div>
       </div>
     </div>
