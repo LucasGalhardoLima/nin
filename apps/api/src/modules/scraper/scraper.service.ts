@@ -5,6 +5,7 @@ import { CardinalScraper } from './scrapers/cardinali.scraper';
 import { ChavesNaMaoScraper } from './scrapers/chavesnamao.scraper';
 import { ThiagoFavaroScraper } from './scrapers/thiagofavaro.scraper';
 import { PropertyData } from './interfaces/property-data.interface';
+import { cleanDescriptionForSource } from './utils/description-cleaner';
 
 @Injectable()
 export class ScraperService {
@@ -30,6 +31,66 @@ export class ScraperService {
     const text = this.normalizeText(value);
     if (!text) return undefined;
     return text;
+  }
+
+  private sanitizeDescription(value?: string | null): string | undefined {
+    const text = this.normalizeText(value);
+    if (!text) return undefined;
+
+    const lines = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    const phonePattern = /(\+?55)?\s*\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}/;
+    const emailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+    const noisePattern = /(central de neg[oó]cios|fale agora|whatsapp|contato|corretor|imobili[aá]ria|creci|repita|ligue|telefone|fone|zap)/i;
+
+    const filtered = lines.filter((line) => {
+      const normalized = line.toLowerCase();
+      if (phonePattern.test(line)) return false;
+      if (emailPattern.test(line)) return false;
+      if (noisePattern.test(normalized)) return false;
+      if (/^\d{3,}$/.test(normalized)) return false;
+      return true;
+    });
+
+    const cleaned = filtered.join('\n').replace(/\s+/g, ' ').trim();
+    return cleaned.length > 0 ? cleaned : undefined;
+  }
+
+  private normalizeCount(value: number | undefined | null, max: number): number | undefined {
+    if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
+    if (value <= 0 || value > max) return undefined;
+    return Math.floor(value);
+  }
+
+  private normalizeArea(value: number | undefined | null): number | undefined {
+    if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
+    if (value < 10 || value > 2000) return undefined;
+    return value;
+  }
+
+  private normalizePrice(value: number | undefined | null): number | undefined {
+    if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
+    if (value <= 0 || value > 50_000_000) return undefined;
+    return value;
+  }
+
+  private normalizeImages(urls?: string[]): string[] {
+    if (!urls?.length) return [];
+    const seen = new Set<string>();
+    const cleaned: string[] = [];
+    for (const url of urls) {
+      const trimmed = this.normalizeText(url);
+      if (!trimmed) continue;
+      if (!/^https?:\/\//i.test(trimmed)) continue;
+      if (seen.has(trimmed)) continue;
+      seen.add(trimmed);
+      cleaned.push(trimmed);
+      if (cleaned.length >= 10) break;
+    }
+    return cleaned;
   }
 
   private dedupeProperties(properties: PropertyData[]): PropertyData[] {
@@ -170,6 +231,17 @@ export class ScraperService {
       throw new Error('Missing cityName');
     }
 
+    const normalized = {
+      description: data.description
+        ? this.sanitizeDescription(cleanDescriptionForSource(data.description, scrapingSource))
+        : undefined,
+      price: this.normalizePrice(data.price),
+      bedrooms: this.normalizeCount(data.bedrooms, 10),
+      bathrooms: this.normalizeCount(data.bathrooms, 10),
+      area: this.normalizeArea(data.area),
+      images: this.normalizeImages(data.images),
+    };
+
     // 1. Find or create City
     let city = await this.prisma.city.findFirst({
       where: { name: { equals: cityName, mode: 'insensitive' } },
@@ -222,7 +294,7 @@ export class ScraperService {
     if (existing) {
       const updateData: Record<string, unknown> = {
         title: title,
-        description: this.normalizeText(data.description) ?? existing.description,
+        description: normalized.description ?? existing.description,
         transactionType: data.transactionType || existing.transactionType,
         propertyType: data.propertyType || existing.propertyType,
         address: this.normalizeText(data.address) ?? existing.address,
@@ -239,17 +311,17 @@ export class ScraperService {
         lastSeenAt: new Date(),
       };
 
-      if (typeof data.price === 'number' && data.price > 0) {
-        updateData.price = data.price;
+      if (typeof normalized.price === 'number') {
+        updateData.price = normalized.price;
       }
-      if (typeof data.bedrooms === 'number' && data.bedrooms > 0) {
-        updateData.bedrooms = data.bedrooms;
+      if (typeof normalized.bedrooms === 'number') {
+        updateData.bedrooms = normalized.bedrooms;
       }
-      if (typeof data.bathrooms === 'number' && data.bathrooms > 0) {
-        updateData.bathrooms = data.bathrooms;
+      if (typeof normalized.bathrooms === 'number') {
+        updateData.bathrooms = normalized.bathrooms;
       }
-      if (typeof data.area === 'number' && data.area > 0) {
-        updateData.area = data.area;
+      if (typeof normalized.area === 'number') {
+        updateData.area = normalized.area;
       }
       if (neighborhoodId) {
         updateData.neighborhoodId = neighborhoodId;
@@ -260,10 +332,10 @@ export class ScraperService {
         data: updateData,
       });
 
-      if (data.images?.length) {
+      if (normalized.images.length) {
         await this.prisma.propertyImage.deleteMany({ where: { propertyId: existing.id } });
         await this.prisma.propertyImage.createMany({
-          data: data.images.map((url, index) => ({
+          data: normalized.images.map((url, index) => ({
             propertyId: existing.id,
             url,
             isPrimary: index === 0,
@@ -277,13 +349,13 @@ export class ScraperService {
       await this.prisma.property.create({
         data: {
           title: title,
-          description: this.normalizeText(data.description),
-          price: data.price ?? 0,
+          description: normalized.description,
+          price: normalized.price ?? 0,
           transactionType: data.transactionType,
           propertyType: data.propertyType,
-          bedrooms: data.bedrooms ?? 0,
-          bathrooms: data.bathrooms ?? 0,
-          area: data.area || 0,
+          bedrooms: normalized.bedrooms ?? 0,
+          bathrooms: normalized.bathrooms ?? 0,
+          area: normalized.area || 0,
           sourceUrl: sourceUrl,
           sourceName: data.sourceName,
           sourceId: sourceId,
@@ -302,7 +374,7 @@ export class ScraperService {
           hasPlayground: data.hasPlayground,
           hasGreenArea: data.hasGreenArea,
           images: {
-            create: (data.images || []).map((url, index) => ({
+            create: normalized.images.map((url, index) => ({
               url,
               isPrimary: index === 0,
             })),
