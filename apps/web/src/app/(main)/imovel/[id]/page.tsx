@@ -94,12 +94,11 @@ const fetchRelated = async (
   }
 };
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string };
-}): Promise<Metadata> {
-  const property = await fetchProperty(params.id);
+type PageProps = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const property = await fetchProperty(id);
   if (!property) {
     return {
       title: 'Imóvel não encontrado | Nin.',
@@ -127,12 +126,9 @@ export async function generateMetadata({
   };
 }
 
-export default async function PropertyDetailPage({
-  params,
-}: {
-  params: { id: string };
-}) {
-  const property = await fetchProperty(params.id);
+export default async function PropertyDetailPage({ params }: PageProps) {
+  const { id } = await params;
+  const property = await fetchProperty(id);
   if (!property) notFound();
   let related = await fetchRelated(property.city.id, property.transactionType, property.id);
   if (related.length === 0) {
