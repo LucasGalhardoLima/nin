@@ -155,6 +155,12 @@ class ApiClient {
     });
   }
 
+  async unhideMatch(propertyId: string) {
+    return this.request<{ success: boolean }>(`/matches/${propertyId}/unhide`, {
+      method: 'POST',
+    });
+  }
+
   async getMatchStatus(propertyId: string) {
     return this.request<MatchStatus>(`/matches/${propertyId}/status`);
   }

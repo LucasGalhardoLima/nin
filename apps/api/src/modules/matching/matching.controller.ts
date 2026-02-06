@@ -54,6 +54,18 @@ export class MatchingController {
     return { success: true };
   }
 
+  @Post(':id/unhide')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Unhide a property match' })
+  async unhideMatch(
+    @Request() req: { user: { id: string } },
+    @Param('id') propertyId: string,
+  ) {
+    await this.matchingService.unhideMatch(req.user.id, propertyId);
+    return { success: true };
+  }
+
   @Get(':id/status')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

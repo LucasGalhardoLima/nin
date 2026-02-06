@@ -28,8 +28,9 @@ import {
   SlidersHorizontal,
   Sparkles
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-import { api, PropertyMatch, User, PaginatedResponse } from '@/lib/api';
+import { api, PropertyMatch, User, PaginatedResponse, UserPreferences } from '@/lib/api';
 
 // SWR fetcher functions
 const fetchUser = (): Promise<User | null> => api.me().catch(() => null);
@@ -112,6 +113,88 @@ const defaultAmenityFilters = {
   greenArea: false,
 };
 
+type PreferenceSnapshot = {
+  family?: Partial<UserPreferences['family']>;
+  budget?: Partial<UserPreferences['budget']>;
+  amenities?: Partial<UserPreferences['amenities']>;
+  personal?: Partial<UserPreferences['personal']>;
+};
+
+type EvidenceItem = {
+  icon: LucideIcon;
+  label: string;
+};
+
+const buildMatchEvidence = (
+  match: PropertyMatch,
+  prefs: PreferenceSnapshot | null,
+  maxPrice: number | null,
+  amenityFilters: typeof defaultAmenityFilters,
+): EvidenceItem[] => {
+  const { property, scoreBreakdown, personalTags } = match;
+  const items: EvidenceItem[] = [];
+
+  if (maxPrice !== null) {
+    if (property.price <= maxPrice) {
+      items.push({
+        icon: Heart,
+        label: `Dentro do orçamento (até ${priceFormatter.format(maxPrice)})`,
+      });
+    } else {
+      const overPercent = Math.round(((property.price - maxPrice) / maxPrice) * 100);
+      items.push({
+        icon: AlertTriangle,
+        label: `Acima do orçamento em ${overPercent}%`,
+      });
+    }
+  }
+
+  const minBedrooms = prefs?.family?.minBedrooms;
+  if (minBedrooms && property.bedrooms >= minBedrooms) {
+    items.push({
+      icon: Bed,
+      label: `${property.bedrooms} quartos (mín. ${minBedrooms})`,
+    });
+  }
+
+  const minBathrooms = prefs?.family?.minBathrooms;
+  if (minBathrooms && property.bathrooms >= minBathrooms) {
+    items.push({
+      icon: Bath,
+      label: `${property.bathrooms} banheiros (mín. ${minBathrooms})`,
+    });
+  }
+
+  const needsSecurity = amenityFilters.security || prefs?.amenities?.needsSecurity;
+  if (needsSecurity && property.hasSecurity) {
+    items.push({ icon: Shield, label: 'Segurança disponível' });
+  }
+
+  const needsGym = amenityFilters.gym || prefs?.amenities?.needsGym;
+  if (needsGym && property.hasGym) {
+    items.push({ icon: Dumbbell, label: 'Academia no condomínio' });
+  }
+
+  const needsGreen = amenityFilters.greenArea || prefs?.amenities?.needsGreenArea;
+  if (needsGreen && property.hasGreenArea) {
+    items.push({ icon: Trees, label: 'Área verde próxima' });
+  }
+
+  if (scoreBreakdown.location >= 70) {
+    items.push({ icon: MapPin, label: 'Localização forte para seu perfil' });
+  }
+
+  if (scoreBreakdown.lifestyle >= 70) {
+    items.push({ icon: Sparkles, label: 'Estilo de vida alinhado' });
+  }
+
+  if (personalTags && personalTags.length > 0) {
+    items.push({ icon: Sparkles, label: `Seu estilo: ${personalTags[0]}` });
+  }
+
+  return items.slice(0, 3);
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -120,8 +203,11 @@ export default function DashboardPage() {
   const [selectedNeighborhoodId, setSelectedNeighborhoodId] = useState<string | null>(null);
   const [minScore, setMinScore] = useState(40);
   const [amenityFilters, setAmenityFilters] = useState(defaultAmenityFilters);
+  const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const [lastHidden, setLastHidden] = useState<{ match: PropertyMatch; index: number } | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
+  const lastHiddenTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sync mounted state to avoid hydration issues
   useEffect(() => {
@@ -139,6 +225,16 @@ export default function DashboardPage() {
   const guestPrefs = !user ? api.getGuestPreferences() : null;
   const targetCityId = user ? prefs?.location?.targetCityId : guestPrefs?.location?.targetCityId;
   const maxPrice = user ? prefs?.budget?.maxPrice ?? null : guestPrefs?.budget?.maxPrice ?? null;
+  const preferenceSnapshot: PreferenceSnapshot | null = useMemo(() => {
+    const source = (user ? prefs : guestPrefs) ?? null;
+    if (!source) return null;
+    return {
+      family: source.family,
+      budget: source.budget,
+      amenities: source.amenities,
+      personal: source.personal,
+    };
+  }, [user, prefs, guestPrefs]);
 
   // SWR for neighborhoods
   const { data: neighborhoods = [] } = useSWR(
@@ -165,9 +261,37 @@ export default function DashboardPage() {
       if (amenityFilters.gym && !match.property.hasGym) return false;
       if (amenityFilters.playground && !match.property.hasPlayground) return false;
       if (amenityFilters.greenArea && !match.property.hasGreenArea) return false;
+      if (showOnlyFavorites && !match.isFavorite) return false;
       return true;
     });
-  }, [matches, minScore, amenityFilters]);
+  }, [matches, minScore, amenityFilters, showOnlyFavorites]);
+
+  const activeAmenityCount = useMemo(
+    () => Object.values(amenityFilters).filter(Boolean).length,
+    [amenityFilters],
+  );
+  const activeFilterCount =
+    (minScore > 40 ? 1 : 0) +
+    (selectedNeighborhoodId ? 1 : 0) +
+    activeAmenityCount +
+    (showOnlyFavorites ? 1 : 0);
+
+  useEffect(() => {
+    if (!lastHidden) return;
+    if (lastHiddenTimeout.current) {
+      clearTimeout(lastHiddenTimeout.current);
+    }
+    lastHiddenTimeout.current = setTimeout(() => {
+      setLastHidden(null);
+    }, 8000);
+
+    return () => {
+      if (lastHiddenTimeout.current) {
+        clearTimeout(lastHiddenTimeout.current);
+        lastHiddenTimeout.current = null;
+      }
+    };
+  }, [lastHidden]);
 
   const recommendedMatchId = useMemo(() => {
     if (filteredMatches.length === 0) return null;
@@ -206,6 +330,13 @@ export default function DashboardPage() {
 
   const totalMatches = matches.length;
   const visibleMatches = filteredMatches.length;
+  const isFilteredEmpty = totalMatches > 0 && visibleMatches === 0;
+  const emptyTitle = isFilteredEmpty
+    ? 'Nenhum imóvel com seus filtros'
+    : 'Nenhum match encontrado';
+  const emptyDescription = isFilteredEmpty
+    ? 'Seus filtros estão muito restritos. Ajuste as preferências ou reduza filtros para ver mais opções.'
+    : 'Ainda não encontramos imóveis para este perfil. Ajuste preferências para ampliar a busca.';
   const isLoading = hasMounted && !user && !userError && api.getToken() !== null;
   const isGuest = hasMounted ? !api.getToken() : false;
 
@@ -253,11 +384,14 @@ export default function DashboardPage() {
     }
   }, [isGuest, router, mutateMatches]);
 
-  const handleHide = useCallback(async (propertyId: string) => {
+  const handleHide = useCallback(async (match: PropertyMatch) => {
     if (isGuest) {
       router.push('/register');
       return;
     }
+    const propertyId = match.property.id;
+    const matchIndex = matches.findIndex((item) => item.property.id === propertyId);
+    setLastHidden({ match, index: matchIndex >= 0 ? matchIndex : 0 });
     setActionLoading(propertyId);
     try {
       await api.hideMatch(propertyId);
@@ -273,13 +407,44 @@ export default function DashboardPage() {
     } finally {
       setActionLoading(null);
     }
-  }, [isGuest, router, mutateMatches]);
+  }, [isGuest, router, mutateMatches, matches]);
+
+  const handleUndoHide = useCallback(async () => {
+    if (!lastHidden) return;
+    const propertyId = lastHidden.match.property.id;
+    setActionLoading(propertyId);
+    try {
+      await api.unhideMatch(propertyId);
+      mutateMatches((current) => {
+        if (!current) return current;
+        const exists = current.data.some((m) => m.property.id === propertyId);
+        if (exists) return current;
+        const insertAt = Math.min(Math.max(lastHidden.index, 0), current.data.length);
+        const restored = { ...lastHidden.match, isHidden: false };
+        const data = [...current.data];
+        data.splice(insertAt, 0, restored);
+        return { ...current, data };
+      }, false);
+      setLastHidden(null);
+    } catch (error) {
+      console.error('Failed to undo hide:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  }, [lastHidden, mutateMatches]);
 
   const handleLogout = useCallback(() => {
     api.setToken(null);
     api.setGuestPreferences(null);
     router.push('/');
   }, [router]);
+
+  const resetFilters = useCallback(() => {
+    setMinScore(40);
+    setAmenityFilters(defaultAmenityFilters);
+    setSelectedNeighborhoodId(null);
+    setShowOnlyFavorites(false);
+  }, []);
 
   if (isLoading) {
     return (
@@ -384,7 +549,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Score + Amenity Filters */}
-        <div className="flex-shrink-0 max-w-7xl mx-auto px-6 pb-4 w-full">
+        <div id="filters" className="flex-shrink-0 max-w-7xl mx-auto px-6 pb-4 w-full">
           <div className="flex flex-col lg:flex-row lg:items-center gap-4">
             <div className="flex items-center gap-4 bg-white border border-nin-200 rounded-nin-sm px-4 py-3 shadow-sm">
               <div className="flex-1 min-w-[220px]">
@@ -411,6 +576,18 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                onClick={() => setShowOnlyFavorites((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  showOnlyFavorites
+                    ? 'bg-sage-600 text-white shadow-md shadow-sage-500/20'
+                    : 'bg-white text-nin-600 border border-nin-200 hover:border-nin-300'
+                }`}
+                title="Mostrar apenas imóveis salvos"
+              >
+                <Heart className="w-3.5 h-3.5" />
+                Favoritos
+              </button>
               {[
                 { key: 'parking', label: 'Estacionamento', icon: Car },
                 { key: 'garden', label: 'Jardim', icon: Trees },
@@ -482,14 +659,56 @@ export default function DashboardPage() {
                 <Home className="w-10 h-10 text-nin-300" />
               </div>
               <h2 className="font-heading text-2xl font-semibold text-nin-700 mb-2">
-                Nenhum match encontrado
+                {emptyTitle}
               </h2>
               <p className="text-nin-500 mb-8 max-w-sm mx-auto">
-                Ajuste o match mínimo, filtros ou preferências para encontrar mais opções.
+                {emptyDescription}
               </p>
-              <Link href="/preferences" className="btn btn-primary">
-                Editar preferências
-              </Link>
+              {activeFilterCount > 0 && (
+                <p className="text-xs text-nin-400 mb-4">
+                  Filtros ativos: {activeFilterCount}
+                </p>
+              )}
+              <div className="flex flex-wrap gap-3 justify-center">
+                {minScore > 40 && (
+                  <button
+                    onClick={() => setMinScore(40)}
+                    className="btn btn-secondary"
+                  >
+                    Reduzir match mínimo
+                  </button>
+                )}
+                {activeAmenityCount > 0 && (
+                  <button
+                    onClick={() => setAmenityFilters(defaultAmenityFilters)}
+                    className="btn btn-secondary"
+                  >
+                    Limpar comodidades
+                  </button>
+                )}
+                {selectedNeighborhoodId && (
+                  <button
+                    onClick={() => setSelectedNeighborhoodId(null)}
+                    className="btn btn-secondary"
+                  >
+                    Ver todos os bairros
+                  </button>
+                )}
+                {showOnlyFavorites && (
+                  <button
+                    onClick={() => setShowOnlyFavorites(false)}
+                    className="btn btn-secondary"
+                  >
+                    Ver todos os imóveis
+                  </button>
+                )}
+                <button onClick={resetFilters} className="btn btn-secondary">
+                  Resetar filtros
+                </button>
+                <Link href="/preferences" className="btn btn-primary">
+                  Editar preferências
+                </Link>
+              </div>
             </div>
           </div>
         ) : (
@@ -531,6 +750,8 @@ export default function DashboardPage() {
                             onHide={handleHide}
                             loading={actionLoading === match.property.id}
                             maxPrice={maxPrice}
+                            preferenceSnapshot={preferenceSnapshot}
+                            amenityFilters={amenityFilters}
                             isRecommended={match.property.id === recommendedMatchId}
                           />
                         ))}
@@ -543,6 +764,22 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {lastHidden && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div className="flex items-center gap-3 bg-nin-900 text-white px-4 py-3 rounded-full shadow-lg">
+            <span className="text-sm">
+              Removido: <span className="font-semibold">{lastHidden.match.property.title}</span>
+            </span>
+            <button
+              onClick={handleUndoHide}
+              className="px-3 py-1 rounded-full bg-white text-nin-900 text-xs font-semibold hover:bg-nin-50 transition-colors"
+            >
+              Desfazer
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -554,13 +791,17 @@ const PropertyCard = memo(function PropertyCard({
   onHide,
   loading,
   maxPrice,
+  preferenceSnapshot,
+  amenityFilters,
   isRecommended,
 }: {
   match: PropertyMatch;
   onSave: (propertyId: string) => void;
-  onHide: (propertyId: string) => void;
+  onHide: (match: PropertyMatch) => void;
   loading: boolean;
   maxPrice: number | null;
+  preferenceSnapshot: PreferenceSnapshot | null;
+  amenityFilters: typeof defaultAmenityFilters;
   isRecommended: boolean;
 }) {
   const { property, matchScore, scoreBreakdown, isFavorite } = match;
@@ -568,6 +809,7 @@ const PropertyCard = memo(function PropertyCard({
     maxPrice !== null &&
     property.price > maxPrice &&
     matchScore >= 70;
+  const evidence = buildMatchEvidence(match, preferenceSnapshot, maxPrice, amenityFilters);
 
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'bg-gradient-to-br from-match-excellent to-emerald-600 shadow-sm ring-1 ring-white/20';
@@ -699,8 +941,17 @@ const PropertyCard = memo(function PropertyCard({
           )}
         </div>
 
-        <div className="text-xs text-nin-500 font-semibold mb-2">
-          Por que combina
+        <div className="flex items-center justify-between text-xs text-nin-500 font-semibold mb-2">
+          <span>Por que combina</span>
+          <div className="flex items-center gap-2 text-[10px] font-medium">
+            <a href="#filters" className="text-nin-500 hover:text-nin-700 transition-colors">
+              Ajustar filtros
+            </a>
+            <span className="text-nin-300">•</span>
+            <Link href="/preferences" className="text-nin-500 hover:text-nin-700 transition-colors">
+              Preferências
+            </Link>
+          </div>
         </div>
         <div className="grid grid-cols-5 gap-2 mb-4">
           {Object.entries(scoreBreakdown).map(([key, value]) => {
@@ -737,6 +988,20 @@ const PropertyCard = memo(function PropertyCard({
             );
           })}
         </div>
+        {evidence.length > 0 ? (
+          <ul className="space-y-1 text-[11px] text-nin-600 mb-4">
+            {evidence.map(({ icon: Icon, label }) => (
+              <li key={label} className="flex items-center gap-2">
+                <Icon className="w-3.5 h-3.5 text-nin-400" />
+                <span>{label}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-[11px] text-nin-400 mb-4">
+            Ainda não temos dados suficientes para explicar este match.
+          </p>
+        )}
         <div className="min-h-[32px] mb-4">
           {match.personalTags && match.personalTags.length > 0 && (
             <div className="flex flex-nowrap gap-2 overflow-hidden">
@@ -762,6 +1027,7 @@ const PropertyCard = memo(function PropertyCard({
           <button
             onClick={() => onSave(property.id)}
             disabled={loading || isFavorite}
+            title={isFavorite ? 'Imóvel salvo' : 'Salvar para revisar depois'}
             className={`btn text-sm px-3 py-2 whitespace-nowrap ${
               isFavorite ? 'bg-sage-100 text-sage-600' : 'btn-secondary'
             }`}
@@ -770,8 +1036,9 @@ const PropertyCard = memo(function PropertyCard({
             {isFavorite ? 'Salvo' : 'Salvar'}
           </button>
           <button
-            onClick={() => onHide(property.id)}
+            onClick={() => onHide(match)}
             disabled={loading}
+            title="Remover da busca (você pode desfazer)"
             className="btn btn-secondary text-sm px-3 py-2 whitespace-nowrap"
           >
             <EyeOff className="w-4 h-4 mr-2" />
