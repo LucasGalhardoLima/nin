@@ -204,10 +204,13 @@ export default function DashboardPage() {
   const [minScore, setMinScore] = useState(40);
   const [amenityFilters, setAmenityFilters] = useState(defaultAmenityFilters);
   const [showOnlyFavorites, setShowOnlyFavorites] = useState(false);
+  const [quickPrefsOpen, setQuickPrefsOpen] = useState(false);
+  const [quickSaving, setQuickSaving] = useState(false);
   const [lastHidden, setLastHidden] = useState<{ match: PropertyMatch; index: number } | null>(null);
   const [hasMounted, setHasMounted] = useState(false);
   const parentRef = useRef<HTMLDivElement>(null);
   const lastHiddenTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [guestPrefsVersion, setGuestPrefsVersion] = useState(0);
 
   // Sync mounted state to avoid hydration issues
   useEffect(() => {
@@ -220,7 +223,10 @@ export default function DashboardPage() {
   });
 
   // Fetch preferences to get cityId (if user is logged in)
-  const { data: prefs } = useSWR(user ? 'preferences' : null, () => api.getPreferences());
+  const { data: prefs, mutate: mutatePrefs } = useSWR(
+    user ? 'preferences' : null,
+    () => api.getPreferences()
+  );
 
   const guestPrefs = !user ? api.getGuestPreferences() : null;
   const targetCityId = user ? prefs?.location?.targetCityId : guestPrefs?.location?.targetCityId;
@@ -234,7 +240,37 @@ export default function DashboardPage() {
       amenities: source.amenities,
       personal: source.personal,
     };
-  }, [user, prefs, guestPrefs]);
+  }, [user, prefs, guestPrefs, guestPrefsVersion]);
+
+  const buildQuickPrefs = useCallback(() => {
+    const source = preferenceSnapshot;
+    return {
+      budget: {
+        maxPrice: source?.budget?.maxPrice ?? null,
+        transactionType: source?.budget?.transactionType ?? 'RENT',
+      },
+      family: {
+        minBedrooms: source?.family?.minBedrooms ?? 1,
+        minBathrooms: source?.family?.minBathrooms ?? 1,
+        hasPets: source?.family?.hasPets ?? false,
+      },
+      personal: {
+        prefersFamilyRhythm: source?.personal?.prefersFamilyRhythm ?? false,
+        prefersQuietRestful: source?.personal?.prefersQuietRestful ?? false,
+        prefersConvenience: source?.personal?.prefersConvenience ?? false,
+        prefersWorkFromHome: source?.personal?.prefersWorkFromHome ?? false,
+        prefersOutdoorLife: source?.personal?.prefersOutdoorLife ?? false,
+      },
+    };
+  }, [preferenceSnapshot]);
+
+  const [quickPrefs, setQuickPrefs] = useState(buildQuickPrefs);
+
+  useEffect(() => {
+    if (!quickPrefsOpen) {
+      setQuickPrefs(buildQuickPrefs());
+    }
+  }, [buildQuickPrefs, quickPrefsOpen]);
 
   // SWR for neighborhoods
   const { data: neighborhoods = [] } = useSWR(
@@ -339,6 +375,7 @@ export default function DashboardPage() {
     : 'Ainda não encontramos imóveis para este perfil. Ajuste preferências para ampliar a busca.';
   const isLoading = hasMounted && !user && !userError && api.getToken() !== null;
   const isGuest = hasMounted ? !api.getToken() : false;
+  const isMatchesLoading = !matchesData && !isLoading;
 
   // Calculate columns based on container width (responsive grid)
   const getColumnCount = () => {
@@ -445,6 +482,44 @@ export default function DashboardPage() {
     setSelectedNeighborhoodId(null);
     setShowOnlyFavorites(false);
   }, []);
+
+  const handleApplyQuickPrefs = useCallback(async () => {
+    const payload = {
+      budget: {
+        maxPrice: quickPrefs.budget.maxPrice ?? null,
+        transactionType: quickPrefs.budget.transactionType,
+      },
+      family: {
+        minBedrooms: quickPrefs.family.minBedrooms,
+        minBathrooms: quickPrefs.family.minBathrooms,
+        hasPets: quickPrefs.family.hasPets,
+      },
+      personal: {
+        prefersFamilyRhythm: quickPrefs.personal.prefersFamilyRhythm,
+        prefersQuietRestful: quickPrefs.personal.prefersQuietRestful,
+        prefersConvenience: quickPrefs.personal.prefersConvenience,
+        prefersWorkFromHome: quickPrefs.personal.prefersWorkFromHome,
+        prefersOutdoorLife: quickPrefs.personal.prefersOutdoorLife,
+      },
+    };
+
+    setQuickSaving(true);
+    try {
+      if (api.getToken()) {
+        await api.updatePreferences(payload);
+        mutatePrefs();
+      } else {
+        api.setGuestPreferences(payload);
+        setGuestPrefsVersion(Date.now());
+      }
+      mutateMatches();
+      setQuickPrefsOpen(false);
+    } catch (error) {
+      console.error('Failed to update quick preferences:', error);
+    } finally {
+      setQuickSaving(false);
+    }
+  }, [quickPrefs, mutateMatches, mutatePrefs]);
 
   if (isLoading) {
     return (
@@ -588,6 +663,18 @@ export default function DashboardPage() {
                 <Heart className="w-3.5 h-3.5" />
                 Favoritos
               </button>
+              <button
+                onClick={() => setQuickPrefsOpen((prev) => !prev)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all flex items-center gap-1.5 ${
+                  quickPrefsOpen
+                    ? 'bg-nin-900 text-white shadow-md shadow-nin-900/20'
+                    : 'bg-white text-nin-600 border border-nin-200 hover:border-nin-300'
+                }`}
+                title="Ajustes rápidos de preferência"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Ajustes rápidos
+              </button>
               {[
                 { key: 'parking', label: 'Estacionamento', icon: Car },
                 { key: 'garden', label: 'Jardim', icon: Trees },
@@ -621,6 +708,168 @@ export default function DashboardPage() {
               })}
             </div>
           </div>
+          {quickPrefsOpen && (
+            <div className="mt-4 bg-white border border-nin-200 rounded-nin-sm p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-nin-800">
+                    Ajustes rápidos de busca
+                  </h3>
+                  <p className="text-xs text-nin-500">
+                    Ajuste seu perfil sem sair do dashboard.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setQuickPrefs(buildQuickPrefs())}
+                    className="btn btn-secondary btn-sm"
+                  >
+                    Resetar
+                  </button>
+                  <button
+                    onClick={handleApplyQuickPrefs}
+                    className="btn btn-primary btn-sm"
+                    disabled={quickSaving}
+                  >
+                    {quickSaving ? 'Salvando...' : 'Aplicar'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-3">
+                  <label className="text-xs font-semibold text-nin-500">Tipo de negociação</label>
+                  <div className="flex gap-2">
+                    {['RENT', 'BUY'].map((type) => (
+                      <button
+                        key={type}
+                        onClick={() =>
+                          setQuickPrefs((prev) => ({
+                            ...prev,
+                            budget: { ...prev.budget, transactionType: type as 'RENT' | 'BUY' },
+                          }))
+                        }
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          quickPrefs.budget.transactionType === type
+                            ? 'bg-nin-500 text-white'
+                            : 'bg-nin-50 text-nin-600 border border-nin-100'
+                        }`}
+                      >
+                        {type === 'RENT' ? 'Alugar' : 'Comprar'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-semibold text-nin-500">Orçamento máximo</label>
+                  <input
+                    type="number"
+                    min={0}
+                    placeholder="Sem limite"
+                    value={quickPrefs.budget.maxPrice ?? ''}
+                    onChange={(e) =>
+                      setQuickPrefs((prev) => ({
+                        ...prev,
+                        budget: {
+                          ...prev.budget,
+                          maxPrice: e.target.value ? Number(e.target.value) : null,
+                        },
+                      }))
+                    }
+                    className="input w-full text-sm"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-semibold text-nin-500">Quartos e banheiros</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={quickPrefs.family.minBedrooms}
+                      onChange={(e) =>
+                        setQuickPrefs((prev) => ({
+                          ...prev,
+                          family: { ...prev.family, minBedrooms: Number(e.target.value) },
+                        }))
+                      }
+                      className="input text-sm"
+                    >
+                      {[1, 2, 3, 4, 5].map((value) => (
+                        <option key={value} value={value}>
+                          {value}+ quartos
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={quickPrefs.family.minBathrooms}
+                      onChange={(e) =>
+                        setQuickPrefs((prev) => ({
+                          ...prev,
+                          family: { ...prev.family, minBathrooms: Number(e.target.value) },
+                        }))
+                      }
+                      className="input text-sm"
+                    >
+                      {[1, 2, 3, 4].map((value) => (
+                        <option key={value} value={value}>
+                          {value}+ banheiros
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-nin-600">
+                    <input
+                      type="checkbox"
+                      checked={quickPrefs.family.hasPets}
+                      onChange={(e) =>
+                        setQuickPrefs((prev) => ({
+                          ...prev,
+                          family: { ...prev.family, hasPets: e.target.checked },
+                        }))
+                      }
+                    />
+                    Aceita pets
+                  </label>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-nin-500 mb-2">Seu estilo</p>
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { key: 'prefersFamilyRhythm', label: 'Ritmo de família' },
+                    { key: 'prefersQuietRestful', label: 'Mais silêncio' },
+                    { key: 'prefersConvenience', label: 'Tudo por perto' },
+                    { key: 'prefersWorkFromHome', label: 'Trabalho em casa' },
+                    { key: 'prefersOutdoorLife', label: 'Vida ao ar livre' },
+                  ].map(({ key, label }) => {
+                    const active = quickPrefs.personal[key as keyof typeof quickPrefs.personal];
+                    return (
+                      <button
+                        key={key}
+                        onClick={() =>
+                          setQuickPrefs((prev) => ({
+                            ...prev,
+                            personal: {
+                              ...prev.personal,
+                              [key]: !prev.personal[key as keyof typeof prev.personal],
+                            },
+                          }))
+                        }
+                        className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                          active
+                            ? 'bg-nin-500 text-white'
+                            : 'bg-nin-50 text-nin-600 border border-nin-100'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Neighborhood Filter Pills */}
@@ -652,7 +901,15 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {filteredMatches.length === 0 && !isLoading ? (
+        {isMatchesLoading ? (
+          <div className="max-w-7xl mx-auto px-6 w-full">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 pb-6">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <SkeletonCard key={index} />
+              ))}
+            </div>
+          </div>
+        ) : filteredMatches.length === 0 && !isLoading ? (
           <div className="max-w-7xl mx-auto px-6 w-full">
             <div className="card text-center py-20 flex flex-col items-center">
               <div className="w-20 h-20 bg-nin-50 rounded-full flex items-center justify-center mb-6">
@@ -878,7 +1135,7 @@ const PropertyCard = memo(function PropertyCard({
         </div>
 
         <div className="flex items-center justify-between mb-4">
-          <span className="text-xl font-bold text-nin-500">
+          <span className="text-2xl font-bold text-nin-500">
             {priceFormatter.format(property.price)}
             {property.transactionType === 'RENT' && (
               <span className="text-sm font-normal text-nin-400 ml-1">/mês</span>
@@ -1023,36 +1280,56 @@ const PropertyCard = memo(function PropertyCard({
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => onSave(property.id)}
-            disabled={loading || isFavorite}
-            title={isFavorite ? 'Imóvel salvo' : 'Salvar para revisar depois'}
-            className={`btn text-sm px-3 py-2 whitespace-nowrap ${
-              isFavorite ? 'bg-sage-100 text-sage-600' : 'btn-secondary'
-            }`}
+        <div className="mt-2 rounded-nin-sm bg-nin-50/80 border border-nin-100 p-3">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onSave(property.id)}
+              disabled={loading || isFavorite}
+              title={isFavorite ? 'Imóvel salvo' : 'Salvar para revisar depois'}
+              className={`btn text-sm px-3 py-2 whitespace-nowrap ${
+                isFavorite ? 'bg-sage-100 text-sage-600' : 'btn-secondary'
+              }`}
+            >
+              <Heart className={`w-4 h-4 mr-1 ${isFavorite ? 'fill-current' : ''}`} />
+              {isFavorite ? 'Salvo' : 'Salvar'}
+            </button>
+            <button
+              onClick={() => onHide(match)}
+              disabled={loading}
+              title="Remover da busca (você pode desfazer)"
+              className="btn btn-secondary text-sm px-3 py-2 whitespace-nowrap"
+            >
+              <EyeOff className="w-4 h-4 mr-2" />
+              Não é para mim
+            </button>
+          </div>
+          <Link
+            href={`/imovel/${property.id}`}
+            className="btn btn-primary w-full mt-3"
           >
-            <Heart className={`w-4 h-4 mr-1 ${isFavorite ? 'fill-current' : ''}`} />
-            {isFavorite ? 'Salvo' : 'Salvar'}
-          </button>
-          <button
-            onClick={() => onHide(match)}
-            disabled={loading}
-            title="Remover da busca (você pode desfazer)"
-            className="btn btn-secondary text-sm px-3 py-2 whitespace-nowrap"
-          >
-            <EyeOff className="w-4 h-4 mr-2" />
-            Não é para mim
-          </button>
+            Ver detalhes
+          </Link>
         </div>
-        <Link
-          href={`/imovel/${property.id}`}
-          className="btn btn-primary w-full mt-2"
-        >
-          Ver detalhes
-        </Link>
         </div>
       </div>
     </div>
   );
 });
+
+const SkeletonCard = () => (
+  <div className="glass-card rounded-nin overflow-hidden animate-pulse">
+    <div className="h-56 bg-nin-100" />
+    <div className="p-5 space-y-3">
+      <div className="h-4 w-3/4 bg-nin-100 rounded" />
+      <div className="h-4 w-1/2 bg-nin-100 rounded" />
+      <div className="flex gap-2">
+        <div className="h-6 w-16 bg-nin-100 rounded-full" />
+        <div className="h-6 w-20 bg-nin-100 rounded-full" />
+      </div>
+      <div className="h-6 w-32 bg-nin-100 rounded" />
+      <div className="h-2 w-full bg-nin-100 rounded" />
+      <div className="h-2 w-4/5 bg-nin-100 rounded" />
+      <div className="h-10 w-full bg-nin-100 rounded" />
+    </div>
+  </div>
+);
