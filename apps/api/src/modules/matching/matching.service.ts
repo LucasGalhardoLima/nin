@@ -915,4 +915,19 @@ export class MatchingService {
       },
     });
   }
+
+  async unhideMatch(userId: string, propertyId: string) {
+    const existing = await this.prisma.savedMatch.findUnique({
+      where: { userId_propertyId: { userId, propertyId } },
+    });
+
+    if (!existing) {
+      return null;
+    }
+
+    return this.prisma.savedMatch.update({
+      where: { id: existing.id },
+      data: { isHidden: false },
+    });
+  }
 }
