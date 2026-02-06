@@ -1,8 +1,17 @@
 import type { MetadataRoute } from 'next';
+import { getApiBaseUrl, getSiteBaseUrl, trimTrailingSlash } from '@/lib/url';
 
-const getApiBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const getSiteBaseUrl = () => process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '');
+type SitemapProperty = {
+  id: string;
+  updatedAt?: string | null;
+  lastScrapedAt?: string | null;
+  createdAt?: string | null;
+};
+
+type PropertyListResponse = {
+  data?: SitemapProperty[];
+  totalPages?: number;
+};
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = trimTrailingSlash(getSiteBaseUrl());
@@ -19,29 +28,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const maxPagesSafety = 50;
     const propertyRoutes: MetadataRoute.Sitemap = [];
 
-    const fetchPage = async (page: number) => {
+    const fetchPage = async (page: number): Promise<PropertyListResponse | null> => {
       const response = await fetch(
         `${getApiBaseUrl()}/properties?limit=${limit}&page=${page}`,
         { next: { revalidate: 3600 } },
       );
       if (!response.ok) return null;
-      return response.json();
+      return response.json() as Promise<PropertyListResponse>;
     };
 
     const first = await fetchPage(1);
     if (!first) return staticRoutes;
 
     const totalPages = Math.min(first.totalPages || 1, maxPagesSafety);
-    const collect = (data: any) => {
+    const collect = (data: PropertyListResponse) => {
       const items = Array.isArray(data?.data) ? data.data : [];
       propertyRoutes.push(
         ...items.map(
-          (item: {
-            id: string;
-            updatedAt?: string | null;
-            lastScrapedAt?: string | null;
-            createdAt?: string | null;
-          }) => ({
+          (item) => ({
             url: `${baseUrl}/imovel/${item.id}`,
             lastModified: item.updatedAt
               ? new Date(item.updatedAt)
@@ -50,7 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
               : item.createdAt
               ? new Date(item.createdAt)
               : undefined,
-            changefreq: 'daily',
+            changeFrequency: 'daily' as const,
             priority: 0.8,
           }),
         ),

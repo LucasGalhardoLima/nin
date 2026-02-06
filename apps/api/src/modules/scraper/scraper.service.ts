@@ -5,6 +5,14 @@ import { CardinalScraper } from './scrapers/cardinali.scraper';
 import { ChavesNaMaoScraper } from './scrapers/chavesnamao.scraper';
 import { ThiagoFavaroScraper } from './scrapers/thiagofavaro.scraper';
 import { PropertyData } from './interfaces/property-data.interface';
+import {
+  normalizeArea,
+  normalizeCount,
+  normalizeImages,
+  normalizePrice,
+  normalizeText,
+  sanitizeDescription,
+} from './utils/property-normalizer';
 
 @Injectable()
 export class ScraperService {
@@ -20,14 +28,8 @@ export class ScraperService {
     ]);
   }
 
-  private normalizeText(value?: string | null): string | undefined {
-    if (!value) return undefined;
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : undefined;
-  }
-
   private normalizeCityName(value?: string | null): string | undefined {
-    const text = this.normalizeText(value);
+    const text = normalizeText(value);
     if (!text) return undefined;
     return text;
   }
@@ -37,8 +39,8 @@ export class ScraperService {
     const unique: PropertyData[] = [];
 
     for (const prop of properties) {
-      const sourceId = this.normalizeText(prop.sourceId);
-      const sourceUrl = this.normalizeText(prop.sourceUrl);
+      const sourceId = normalizeText(prop.sourceId);
+      const sourceUrl = normalizeText(prop.sourceUrl);
       const key = `${prop.scrapingSource}::${sourceId || 'no-id'}::${sourceUrl || 'no-url'}`;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -153,22 +155,31 @@ export class ScraperService {
    * Upsert a property into the database
    */
   private async upsertProperty(data: PropertyData): Promise<{ created: boolean }> {
-    const sourceUrl = this.normalizeText(data.sourceUrl);
+    const sourceUrl = normalizeText(data.sourceUrl);
     if (!sourceUrl) {
       throw new Error('Missing sourceUrl');
     }
 
-    const sourceId = this.normalizeText(data.sourceId);
-    const scrapingSource = this.normalizeText(data.scrapingSource);
+    const sourceId = normalizeText(data.sourceId);
+    const scrapingSource = normalizeText(data.scrapingSource);
     if (!scrapingSource) {
       throw new Error('Missing scrapingSource');
     }
 
-    const title = this.normalizeText(data.title) || 'Imóvel sem título';
+    const title = normalizeText(data.title) || 'Imóvel sem título';
     const cityName = this.normalizeCityName(data.cityName);
     if (!cityName) {
       throw new Error('Missing cityName');
     }
+
+    const normalized = {
+      description: sanitizeDescription(data.description, scrapingSource),
+      price: normalizePrice(data.price),
+      bedrooms: normalizeCount(data.bedrooms, 10),
+      bathrooms: normalizeCount(data.bathrooms, 10),
+      area: normalizeArea(data.area),
+      images: normalizeImages(data.images),
+    };
 
     // 1. Find or create City
     let city = await this.prisma.city.findFirst({
@@ -188,7 +199,7 @@ export class ScraperService {
 
     // 2. Find or create Neighborhood
     let neighborhoodId: string | undefined;
-    const neighborhoodName = this.normalizeText(data.neighborhoodName);
+    const neighborhoodName = normalizeText(data.neighborhoodName);
     if (neighborhoodName) {
       const neighborhood = await this.prisma.neighborhood.findFirst({
         where: { 
@@ -222,10 +233,10 @@ export class ScraperService {
     if (existing) {
       const updateData: Record<string, unknown> = {
         title: title,
-        description: this.normalizeText(data.description) ?? existing.description,
+        description: normalized.description ?? existing.description,
         transactionType: data.transactionType || existing.transactionType,
         propertyType: data.propertyType || existing.propertyType,
-        address: this.normalizeText(data.address) ?? existing.address,
+        address: normalizeText(data.address) ?? existing.address,
         hasParking: data.hasParking ?? existing.hasParking,
         hasPool: data.hasPool ?? existing.hasPool,
         hasGarden: data.hasGarden ?? existing.hasGarden,
@@ -239,17 +250,17 @@ export class ScraperService {
         lastSeenAt: new Date(),
       };
 
-      if (typeof data.price === 'number' && data.price > 0) {
-        updateData.price = data.price;
+      if (typeof normalized.price === 'number') {
+        updateData.price = normalized.price;
       }
-      if (typeof data.bedrooms === 'number' && data.bedrooms > 0) {
-        updateData.bedrooms = data.bedrooms;
+      if (typeof normalized.bedrooms === 'number') {
+        updateData.bedrooms = normalized.bedrooms;
       }
-      if (typeof data.bathrooms === 'number' && data.bathrooms > 0) {
-        updateData.bathrooms = data.bathrooms;
+      if (typeof normalized.bathrooms === 'number') {
+        updateData.bathrooms = normalized.bathrooms;
       }
-      if (typeof data.area === 'number' && data.area > 0) {
-        updateData.area = data.area;
+      if (typeof normalized.area === 'number') {
+        updateData.area = normalized.area;
       }
       if (neighborhoodId) {
         updateData.neighborhoodId = neighborhoodId;
@@ -260,10 +271,10 @@ export class ScraperService {
         data: updateData,
       });
 
-      if (data.images?.length) {
+      if (normalized.images.length) {
         await this.prisma.propertyImage.deleteMany({ where: { propertyId: existing.id } });
         await this.prisma.propertyImage.createMany({
-          data: data.images.map((url, index) => ({
+          data: normalized.images.map((url, index) => ({
             propertyId: existing.id,
             url,
             isPrimary: index === 0,
@@ -277,13 +288,13 @@ export class ScraperService {
       await this.prisma.property.create({
         data: {
           title: title,
-          description: this.normalizeText(data.description),
-          price: data.price ?? 0,
+          description: normalized.description,
+          price: normalized.price ?? 0,
           transactionType: data.transactionType,
           propertyType: data.propertyType,
-          bedrooms: data.bedrooms ?? 0,
-          bathrooms: data.bathrooms ?? 0,
-          area: data.area || 0,
+          bedrooms: normalized.bedrooms ?? 0,
+          bathrooms: normalized.bathrooms ?? 0,
+          area: normalized.area || 0,
           sourceUrl: sourceUrl,
           sourceName: data.sourceName,
           sourceId: sourceId,
@@ -292,7 +303,7 @@ export class ScraperService {
           lastSeenAt: new Date(),
           cityId: city.id,
           neighborhoodId: neighborhoodId,
-          address: this.normalizeText(data.address),
+          address: normalizeText(data.address),
           hasParking: data.hasParking,
           hasPool: data.hasPool,
           hasGarden: data.hasGarden,
@@ -302,7 +313,7 @@ export class ScraperService {
           hasPlayground: data.hasPlayground,
           hasGreenArea: data.hasGreenArea,
           images: {
-            create: (data.images || []).map((url, index) => ({
+            create: normalized.images.map((url, index) => ({
               url,
               isPrimary: index === 0,
             })),

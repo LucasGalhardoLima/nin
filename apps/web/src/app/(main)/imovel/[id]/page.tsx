@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { cookies } from 'next/headers';
 import type { Metadata } from 'next';
 import {
   ArrowLeft,
@@ -25,6 +26,7 @@ import {
   DoorOpen,
 } from 'lucide-react';
 import type { Property } from '@/lib/api';
+import { getApiBaseUrl, getSiteBaseUrl, trimTrailingSlash } from '@/lib/url';
 import PropertyActions from './property-actions';
 
 const priceFormatter = new Intl.NumberFormat('pt-BR', {
@@ -53,10 +55,6 @@ const formatRelativeDate = (value?: string | null): string => {
   const years = Math.floor(diffDays / 365);
   return `Atualizado há ${years} ${years === 1 ? 'ano' : 'anos'}`;
 };
-
-const getApiBaseUrl = () => process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-const getSiteBaseUrl = () => process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-const trimTrailingSlash = (value: string) => value.replace(/\/+$/, '');
 
 const fetchProperty = async (id: string): Promise<Property | null> => {
   try {
@@ -94,11 +92,29 @@ const fetchRelated = async (
   }
 };
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}): Promise<Metadata> {
+const fetchInitialSavedStatus = async (propertyId: string): Promise<boolean> => {
+  const cookieStore = await cookies();
+  const token = cookieStore.get('nin_token')?.value;
+  if (!token) return false;
+
+  try {
+    const response = await fetch(`${getApiBaseUrl()}/matches/${propertyId}/status`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      cache: 'no-store',
+    });
+    if (!response.ok) return false;
+    const data = (await response.json()) as { isFavorite?: boolean };
+    return data.isFavorite === true;
+  } catch {
+    return false;
+  }
+};
+
+type PageProps = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
   const property = await fetchProperty(id);
   if (!property) {
@@ -128,14 +144,11 @@ export async function generateMetadata({
   };
 }
 
-export default async function PropertyDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function PropertyDetailPage({ params }: PageProps) {
   const { id } = await params;
   const property = await fetchProperty(id);
   if (!property) notFound();
+  const initialIsSaved = await fetchInitialSavedStatus(property.id);
   let related = await fetchRelated(property.city.id, property.transactionType, property.id);
   if (related.length === 0) {
     related = await fetchRelated('all', property.transactionType, property.id);
@@ -324,7 +337,7 @@ export default async function PropertyDetailPage({
           </div>
 
           <aside className="space-y-6">
-            <PropertyActions propertyId={property.id} />
+            <PropertyActions propertyId={property.id} initialIsSaved={initialIsSaved} />
 
             <div className="card">
               <div className="flex items-center justify-between mb-2">
@@ -510,7 +523,6 @@ const formatItem = (value: string) => {
     { pattern: /\bbosque\b/gi, replacement: 'Bosque' },
     { pattern: /\bparque\b/gi, replacement: 'Parque' },
     { pattern: /\bárea privativa\b/gi, replacement: 'Área Privativa' },
-    { pattern: /\bbanheiro social\b/gi, replacement: 'Banheiro Social' },
     { pattern: /\bdespensa\b/gi, replacement: 'Despensa' },
     { pattern: /\bdep[oó]sito\b/gi, replacement: 'Depósito' },
     { pattern: /\bescrit[oó]rio\b/gi, replacement: 'Escritório' },
